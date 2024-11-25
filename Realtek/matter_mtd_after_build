@@ -1,0 +1,23 @@
+#!/bin/bash
+
+arm-none-eabi-objdump -S -C build/bin/matter-cli-mtd > build/bin/matter-cli-mtd.asm
+
+if [ "$1" = "bank1" ]; then
+    BIN_FILE='./build/bin/matter-cli-mtd_bank1.bin'
+    MP_FILE='./build/bin/matter-cli-mtd_bank1_MP.bin'
+    TRACE_FILE='./build/bin/matter-cli-mtd_bank1.trace'
+else
+    BIN_FILE='./build/bin/matter-cli-mtd_bank0.bin'
+    MP_FILE='./build/bin/matter-cli-mtd_bank0_MP.bin'
+    TRACE_FILE='./build/bin/matter-cli-mtd_bank0.trace'
+fi
+
+arm-none-eabi-objcopy -O binary -S build/bin/matter-cli-mtd ${BIN_FILE} --remove-section=App.trace
+arm-none-eabi-objcopy -O binary -S build/bin/matter-cli-mtd ${TRACE_FILE} --only-section=App.trace
+
+chmod +x ../../tools/prepend_header/prepend_header
+chmod +x ../../tools/md5/MD5
+
+../../tools/prepend_header/prepend_header -t app_code -b 15 -p ${BIN_FILE} -m 1 -i ../openthread/vendor/bee4/common/mp.ini -r ../../tools/keys/rtk_ecdsa.pem -a ../../tools/keys/key.json
+
+../../tools/md5/MD5 ${MP_FILE}

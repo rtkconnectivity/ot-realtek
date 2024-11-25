@@ -1,0 +1,8 @@
+arm-none-eabi-objcopy -O binary -S build/bin/ot-cli-ftd build/bin/ot-cli-ftd.bin --remove-section=App.trace
+arm-none-eabi-objcopy -O binary -S build/bin/ot-cli-ftd build/bin/ot-cli-ftd.trace --only-section=App.trace
+
+arm-none-eabi-objdump -S -C build/bin/ot-cli-ftd > build/bin/ot-cli-ftd.asm
+
+../../tools/prepend_header/prepend_header -t app_code -b 15 -p ./build/bin/ot-cli-ftd.bin -m 1 -i ../openthread/vendor/bee4/common/mp.ini -r ../../tools/keys/rtk_ecdsa.pem -a ../../tools/keys/key.json
+
+../../tools/md5/MD5 ./build/bin/ot-cli-ftd_MP.bin

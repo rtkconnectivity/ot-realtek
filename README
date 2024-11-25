@@ -1,0 +1,15 @@
+##########
+# bee4 openthread
+##########
+
+folder path: beeSDK/subsys/openthread
+
+1. clone openthread in current folder
+git clone https://github.com/openthread/openthread
+
+2. build
+OT_CMAKE_NINJA_TARGET="ot-cli-ftd" ./Realtek/build bee4 sdk rtl8777g
+
+3.Prepare image for MPTool
+./Realtek/openthread_after_build
+

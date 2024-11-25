@@ -1,0 +1,29 @@
+#!/bin/bash
+
+cp -f vendor/bee4/$1/*.ini build/ota/
+cp -f vendor/bee4/$1/firmware/bank0/* build/ota/
+cp -f vendor/bee4/$1/firmware/bank1/* build/ota/
+cp -f build/bin/*MP_dev*.bin build/ota/
+
+PROJECT_CONFIG=../matter/connectedhomeip/examples/$2/realtek_bee/main/include/CHIPProjectConfig.h
+VENDOR_ID=$(awk '/#define CHIP_DEVICE_CONFIG_DEVICE_VENDOR_ID/{print $3}' ${PROJECT_CONFIG})
+PRODUCT_ID=$(awk '/#define CHIP_DEVICE_CONFIG_DEVICE_PRODUCT_ID/{print $3}' ${PROJECT_CONFIG})
+VERSION=$(awk '/#define CHIP_DEVICE_CONFIG_DEVICE_SOFTWARE_VERSION/{print $3; exit}' ${PROJECT_CONFIG})
+VERSION_STR=$(awk '/#define CHIP_DEVICE_CONFIG_DEVICE_SOFTWARE_VERSION_STRING/{print $3}' ${PROJECT_CONFIG})
+
+echo "VENDOR_ID=${VENDOR_ID}"
+echo "PRODUCT_ID=${PRODUCT_ID}"
+echo "VERSION=${VERSION}"
+echo "VERSION_STR=${VERSION_STR}"
+
+chmod +x tools/FlashMapGenerateCli
+chmod +x tools/PackCli
+
+tools/FlashMapGenerateCli build/ota $3 build/ota
+
+tools/PackCli 8772gwp ota build/ota build
+
+../matter/connectedhomeip/src/app/ota_image_tool.py create -v ${VENDOR_ID} -p ${PRODUCT_ID} -vn ${VERSION} -vs ${VERSION_STR} -da sha256 build/ota/ImgPacketFile*.bin build/ota/matter.ota
+
+rm -rf build/ota/*.bin
+rm -rf build/ota/*.ini
