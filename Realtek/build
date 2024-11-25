@@ -1,0 +1,365 @@
+#!/bin/bash
+#
+#  Copyright (c) 2020, The OpenThread Authors.
+#  All rights reserved.
+#
+#  Redistribution and use in source and binary forms, with or without
+#  modification, are permitted provided that the following conditions are met:
+#  1. Redistributions of source code must retain the above copyright
+#     notice, this list of conditions and the following disclaimer.
+#  2. Redistributions in binary form must reproduce the above copyright
+#     notice, this list of conditions and the following disclaimer in the
+#     documentation and/or other materials provided with the distribution.
+#  3. Neither the name of the copyright holder nor the
+#     names of its contributors may be used to endorse or promote products
+#     derived from this software without specific prior written permission.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+#  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+#  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+#  ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+#  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+#  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+#  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+#  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+#  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+#  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+#  POSSIBILITY OF SUCH DAMAGE.
+#
+
+set -euxo pipefail
+
+OT_CMAKE_NINJA_TARGET=${OT_CMAKE_NINJA_TARGET:-}
+
+readonly OT_SRCDIR="$(pwd)"
+readonly OT_OPTIONS=(
+    "-DCMAKE_BUILD_TYPE=Release"
+    "-DOT_PLATFORM=external"
+    "-DOT_SLAAC=ON"
+
+    "-DOT_BORDER_AGENT=ON"
+    "-DOT_BORDER_ROUTER=ON"
+    "-DOT_COMMISSIONER=ON"
+    "-DOT_JOINER=ON"
+    "-DOT_DNS_CLIENT=ON"
+    "-DOT_DHCP6_SERVER=ON"
+    "-DOT_DHCP6_CLIENT=ON"
+    "-DOT_COAP=ON"
+    "-DOT_COAPS=ON"
+    "-DOT_COAP_OBSERVE=ON"
+#    "-DOT_DIAGNOSTIC=ON"
+    "-DOT_LINK_RAW=ON"
+    "-DOT_MAC_FILTER=ON"
+#    "-DOT_MTD_NETDIAG=ON"
+    "-DOT_SERVICE=ON"
+    "-DOT_UDP_FORWARD=ON"
+    "-DOT_ECDSA=ON"
+    "-DOT_SNTP_CLIENT=ON"
+    "-DOT_CHILD_SUPERVISION=ON"
+    "-DOT_JAM_DETECTION=ON"
+    "-DOT_LOG_LEVEL_DYNAMIC=ON"
+    "-DOT_EXTERNAL_HEAP=ON"
+    "-DOT_SRP_CLIENT=ON"
+    "-DOT_DUA=ON"
+    "-DOT_BACKBONE_ROUTER=ON"
+    "-DOT_MLR=ON"
+    "-DOT_CSL_RECEIVER=ON"
+    "-DOT_LINK_METRICS_INITIATOR=ON"
+    "-DOT_LINK_METRICS_SUBJECT=ON"
+    "-DOT_CHANNEL_MONITOR=OFF"
+)
+readonly OT_OPTIONS_MINIMAL=(
+    "-DCMAKE_BUILD_TYPE=Release"
+    "-DOT_PLATFORM=external"
+    "-DOT_SLAAC=ON"
+    "-DOT_LOG_LEVEL_DYNAMIC=ON"
+    "-DOT_CSL_RECEIVER=ON"
+    "-DOT_CHANNEL_MONITOR=OFF"
+)
+
+#to add more by modify ld
+is_create_ld_gen()
+{
+    local ldgentargets=("rtl8777g" "evb" "evb_dual" "rtl8777g_dual" \
+    "rtl8777g_cert" "rtl8777g_apple" "rtl8777g_rpc" "rtl8777g_test") 
+
+    for ldgentarget in "${ldgentargets[@]}"; do
+        if [ "${board_target}" == "${ldgentarget}" ]; then
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+#modify folder to vendor/rtl8777g
+is_rtl8777g_signal_target() 
+{
+    if [ ${board_target} == "rtl8777g" ] || [ ${board_target} == "rtl8777g_cert" ] \
+    || [ ${board_target} == "rtl8777g_apple" ] || [ ${board_target} == "rtl8777g_rpc" ]; then
+        return 0 
+    else
+        return 1
+    fi
+}
+
+is_dual_target() 
+{
+    if [ ${board_target} == "evb_dual" ] || [ ${board_target} == "rtl8777g_dual" ]; then
+        return 0 
+    else
+        return 1
+    fi
+}
+
+build_matter()
+{
+    ENABLE_PERSISTENTSTORAGE_AUDIT=0
+    export MATTER_ENABLE_PERSISTENTSTORAGE_AUDIT=$ENABLE_PERSISTENTSTORAGE_AUDIT
+    export BEE_MATTER=${OT_SRCDIR}/../matter/connectedhomeip
+    export MATTER_CONFIG_PATH=${BEE_MATTER}/config/realtek_bee
+
+    if is_dual_target; then
+        export MATTER_ENABLE_OTA_REQUESTOR=1
+    else
+        export MATTER_ENABLE_OTA_REQUESTOR=0
+    fi
+
+    export MATTER_EXAMPLE_PATH=${BEE_MATTER}/examples/${APP_SELECT}/realtek_bee
+    echo "MATTER_EXAMPLE_PATH at: ${MATTER_EXAMPLE_PATH}"
+
+    if [ "${MATTER_UART_SELECT}" == "pw_rpc" ]; then
+        export MATTER_ENABLE_PW_RPC=1
+        export MATTER_ENABLE_SHELL=0
+        export MATTER_ENABLE_OTCLI=0
+    elif [ "${MATTER_UART_SELECT}" == "shell" ]; then
+        export MATTER_ENABLE_PW_RPC=0
+        export MATTER_ENABLE_SHELL=1
+        export MATTER_ENABLE_OTCLI=1
+    else
+        export MATTER_ENABLE_PW_RPC=0
+        export MATTER_ENABLE_SHELL=0
+        export MATTER_ENABLE_OTCLI=0
+    fi
+}
+
+build()
+{
+    local builddir="${OT_CMAKE_BUILD_DIR:-build}"
+
+    mkdir -p "${builddir}"
+    cd "${builddir}"
+
+    cmake -GNinja -DOT_COMPILE_WARNING_AS_ERROR=ON "$@" "${OT_SRCDIR}"
+
+    if [[ -n ${OT_CMAKE_NINJA_TARGET[*]} ]]; then
+        ninja "${OT_CMAKE_NINJA_TARGET[@]}"
+    else
+        ninja
+    fi
+
+    cd "${OT_SRCDIR}"
+}
+
+pre_build()
+{
+    if is_create_ld_gen >/dev/null 2>&1; then
+       ${OT_SRCDIR}/Realtek/matter_pre_build ${BUILD_BANK} ${target}
+    fi
+}
+
+post_build()
+{
+    if [ "${OT_CMAKE_NINJA_TARGET}" == "matter-cli-ftd" ]; then
+        ${OT_SRCDIR}/Realtek/matter_after_build ${BUILD_BANK}
+    elif [ "${OT_CMAKE_NINJA_TARGET}" == "matter-cli-mtd" ]; then
+        ${OT_SRCDIR}/Realtek/matter_mtd_after_build ${BUILD_BANK}
+    fi
+
+    if is_create_ld_gen >/dev/null 2>&1; then
+        rm -f $PWD/vendor/${platform}/${target}/*.gen
+    fi
+}
+
+main()
+{
+    local platform="$1"
+    local build_type="$2"
+    local board_target="$3"
+    local target="$3"
+    local options
+    
+    if is_rtl8777g_signal_target; then
+        target="rtl8777g"
+    fi
+
+    if is_create_ld_gen >/dev/null 2>&1; then
+        BUILD_BANK="bank0"
+    fi
+    
+    MATTER_UART_SELECT="noshell"
+    if [ "${OT_CMAKE_NINJA_TARGET}" == "matter-cli-ftd" ] || [ "${OT_CMAKE_NINJA_TARGET}" == "matter-cli-mtd" ]; then       
+        APP_SELECT="$4" 
+        if is_dual_target;then
+            OTA_VERSION="$5"
+            if [ $# -eq 6 ];then
+                MATTER_UART_SELECT="$6"
+            fi
+        elif [ $# -eq 5 ];then
+            MATTER_UART_SELECT="$5"
+        fi
+    fi
+
+    options+=("-DBUILD_TYPE=${build_type}")
+    case "${platform}" in
+        bee4)
+        options+=("${OT_OPTIONS[@]}")
+        options+=("-DOT_NCP_VENDOR_HOOK_SOURCE=$PWD/vendor/${platform}/example_vendor_hook.cpp")
+        options+=("-DRT_PLATFORM=${platform}")
+        options+=("-DBUILD_BOARD_TARGET=${board_target}")
+        options+=("-DBUILD_TARGET=${target}")
+        case "${OT_CMAKE_NINJA_TARGET}" in
+            matter-cli-ftd | matter-cli-mtd)
+                case "${board_target}" in
+                    rtl8777g_apple)
+                        cd ${OT_SRCDIR}/openthread && git checkout 171f94c30 && cd ${OT_SRCDIR}
+                        ;;
+                    *)
+                        cd ${OT_SRCDIR}/openthread && git checkout thread-reference-20230706 && cd ${OT_SRCDIR}
+                        ;;
+                esac
+                build_matter
+                options+=("-DCMAKE_TOOLCHAIN_FILE=vendor/${platform}/arm-none-eabi.cmake")
+                options+=("-DOPENTHREAD_ENABLE=ON")
+                case "${MATTER_UART_SELECT}" in
+                     shell)
+                        options+=("-DENABLE_CLI=ON")
+                        options+=("-DENABLE_PW_RPC=OFF")
+                        ;;
+                     pw_rpc)
+                        options+=("-DENABLE_CLI=ON")
+                        options+=("-DENABLE_PW_RPC=ON")
+                        ;;
+                     noshell)
+                        options+=("-DENABLE_CLI=OFF")
+                        options+=("-DENABLE_PW_RPC=OFF")
+                        ;;
+                esac
+                ;;
+            ot-cli-ftd | ot-cli-mtd)
+                case "${board_target}" in
+                    rtl8777g_apple)
+                        cd ${OT_SRCDIR}/openthread && git checkout 171f94c30 && cd ${OT_SRCDIR}
+                        ;;
+                    *)
+                        cd ${OT_SRCDIR}/openthread && git checkout thread-reference-20230706 && cd ${OT_SRCDIR}
+                        ;;
+                esac
+                options+=("-DCMAKE_TOOLCHAIN_FILE=vendor/${platform}/arm-none-eabi.cmake")
+                options+=("-DENABLE_CLI=ON")
+                ;;
+            ot-ncp-ftd | ot-ncp-mtd)
+                cd ${OT_SRCDIR}/openthread && git checkout thread-reference-20230119 && cd ${OT_SRCDIR}
+                options+=("-DCMAKE_TOOLCHAIN_FILE=vendor/${platform}/ncp-arm-none-eabi.cmake")
+                options+=("-DENABLE_CLI=OFF -DOT_DNSSD_SERVER=ON -DOT_SRP_SERVER=ON")
+                ;;
+            ot-rcp)
+                cd ${OT_SRCDIR}/openthread && git checkout thread-reference-20230706 && cd ${OT_SRCDIR}
+                options+=("-DCMAKE_TOOLCHAIN_FILE=vendor/${platform}/arm-none-eabi.cmake")
+                options+=("-DENABLE_CLI=OFF -DOT_DNSSD_SERVER=ON -DOT_SRP_SERVER=ON")
+                ;;
+            *)
+                ;;
+        esac
+        case "${build_type}" in
+            dev)
+                rm -Rf ${OT_SRCDIR}/openthread/third_party/mbedtls/repo
+                cd ${OT_SRCDIR}/../mbedtls && tar -zcvf v3.0.0.tar.gz repo && cd ${OT_SRCDIR}
+                tar zxvf ${OT_SRCDIR}/../mbedtls/v3.0.0.tar.gz -C ${OT_SRCDIR}/openthread/third_party/mbedtls/
+                sleep 2
+                cp -f ${OT_SRCDIR}/vendor/bee4/common/common.h ${OT_SRCDIR}/openthread/third_party/mbedtls/repo/library/
+                cp -f ${OT_SRCDIR}/vendor/bee4/common/threading_alt.h ${OT_SRCDIR}/openthread/third_party/mbedtls/repo/include/
+                rm ${OT_SRCDIR}/../mbedtls/v3.0.0.tar.gz
+                ;;
+            sdk)
+                options+=("-DOT_EXTERNAL_MBEDTLS=bee4-mbedtls")
+                ;;
+        esac
+        options+=("-DOT_CMAKE_NINJA_TARGET=${OT_CMAKE_NINJA_TARGET}")
+        ;;
+        bee3plus)
+        if [ "${OT_CMAKE_NINJA_TARGET}" == "ot-cli-mtd" ]; then
+            options+=("${OT_OPTIONS_MINIMAL[@]}")
+        else
+            options+=("${OT_OPTIONS[@]}")
+        fi
+        options+=("-DCMAKE_TOOLCHAIN_FILE=vendor/${platform}/arm-none-eabi.cmake")
+        options+=("-DRT_PLATFORM=${platform}")
+        #options+=("-DBUILD_BOARD_TARGET=${board_target}")
+        options+=("-DBUILD_TARGET=${target}")
+        options+=("-DRT_PATCH=ON")
+        case "${OT_CMAKE_NINJA_TARGET}" in
+            ot-cli-mtd)
+                cd ${OT_SRCDIR}/openthread && git checkout thread-reference-20230706 && cd ${OT_SRCDIR}
+                ;;
+            ot-rcp)
+                case "${board_target}" in
+                    rtl8771htv)
+                        options+=("-DOT_NCP_VENDOR_HOOK_SOURCE=$PWD/vendor/${platform}/example_vendor_hook.cpp")
+                        cd ${OT_SRCDIR}/openthread && git reset --hard HEAD && git checkout thread-reference-20230706 && git apply ../vendor/bee3plus/thread-reference-20230706.patch && cd ${OT_SRCDIR}
+                        ;;
+                    *)
+                        cd ${OT_SRCDIR}/openthread && git checkout thread-reference-20230706 && cd ${OT_SRCDIR}
+                        ;;
+                esac
+                options+=("-DOT_DNSSD_SERVER=ON -DOT_SRP_SERVER=ON")
+                case "${build_type}" in
+                    dev)
+                        tar zxvf ${OT_SRCDIR}/Realtek/v3.0.0.tar.gz -C ${OT_SRCDIR}/openthread/third_party/mbedtls/
+                        ;;
+                esac
+                ;;
+            *)
+                ;;
+        esac
+        options+=("-DOT_CMAKE_NINJA_TARGET=${OT_CMAKE_NINJA_TARGET}")
+        ;;
+    esac
+
+    options+=("$@")
+
+    pre_build
+    build "${options[@]}"
+    post_build
+
+    if [ "${OT_CMAKE_NINJA_TARGET}" == "ot-rcp" ] && [ ${board_target} == "rtl8752h" ];then
+        grep "__libbee3plus_internal_length" ${OT_SRCDIR}/build/ot-rcp.map
+        grep "__libbee3plus_peripheral_length" ${OT_SRCDIR}/build/ot-rcp.map
+        grep "__libopenthread_bee3plus_length" ${OT_SRCDIR}/build/ot-rcp.map
+        grep "__libopenthread_radio_length" ${OT_SRCDIR}/build/ot-rcp.map
+        grep "__libopenthread_rcp_length" ${OT_SRCDIR}/build/ot-rcp.map
+        grep "__libopenthread_spinel_rcp_length" ${OT_SRCDIR}/build/ot-rcp.map
+        grep "__libopenthread_hdlc_length" ${OT_SRCDIR}/build/ot-rcp.map
+        grep "__rw_length" ${OT_SRCDIR}/build/ot-rcp.map
+        grep "__bss_length__" ${OT_SRCDIR}/build/ot-rcp.map
+    fi
+
+    #for bank1 build
+    if is_dual_target >/dev/null 2>&1;then
+        rm -rf bank0
+        mv build bank0
+        mkdir -p build/ota
+        cp -f bank0/bin/*MP_dev*.bin build/ota/
+        mv bank0 build
+
+        BUILD_BANK="bank1"
+        pre_build
+        build "${options[@]}"
+        post_build
+
+        ${OT_SRCDIR}/Realtek/matter_ota_pack ${target} ${APP_SELECT} ${OTA_VERSION}
+    fi
+}
+
+
+main "$@"
