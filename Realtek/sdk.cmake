@@ -4,7 +4,7 @@ endif()
 
 if(${RT_PLATFORM} STREQUAL "bee4")
 set(REALTEK_SDK_ROOT
-    ${PROJECT_SOURCE_DIR}/../..
+    ${PROJECT_SOURCE_DIR}/third_party/Realtek/rtl87x2g_sdk
 )
 set(REALTEK_SDK_INCPATH
     ${REALTEK_SDK_ROOT}/subsys/freertos

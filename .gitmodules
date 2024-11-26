@@ -1,3 +1,6 @@
 [submodule "openthread"]
 	path = openthread
 	url = https://github.com/openthread/openthread.git
+[submodule "third_party/Realtek/rtl87x2g_sdk"]
+	path = third_party/Realtek/rtl87x2g_sdk
+	url = https://github.com/rtkconnectivity/rtl87x2g_sdk.git

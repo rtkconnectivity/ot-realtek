@@ -10,6 +10,16 @@ git clone https://github.com/openthread/openthread
 2. build
 OT_CMAKE_NINJA_TARGET="ot-cli-ftd" ./Realtek/build bee4 sdk rtl8777g
 
-3.Prepare image for MPTool
+3. Prepare image for MPTool
 ./Realtek/openthread_after_build
 
+4. copy image to mpcli file
+cp ./build/bin/<ot-cli-ftd_MP_dev_0.0.0.0_XXXX.bin> ./tool/mpcli/bin
+
+5. modify mptool config file
+vim ./tool/mpcli/mptoolconfig.json
+replace <ot-cli-ftd.bin> with image file name
+
+6. program file
+sudo mpcli -f mptoolconfig.json -c <serial port> -a -r
+Example: sudo mpcli -f mptoolconfig.json -c /dev/ttyUSB0 -a -r
