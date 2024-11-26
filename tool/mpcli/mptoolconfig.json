@@ -1,0 +1,12 @@
+{
+    "mptoolconfig": {"port": "/dev/ttyUSB0","baud": "115200",
+        "appimage": {"relativepath": "bin",
+            "file": [{"id": 0,"address": "0x04001000","name": "configFile_2023.11.14.15-6f37eb264a0b078eb9cc388608c8ea5a.bin","enable":"1"},
+                    {"id": 1,"address": "0x04002000","name": "boot_patch_MP_master_1.0.66.0_295b1124-c4ce1ab447414599c3da0b7a26e5f399.bin","enable":"1"},
+                    {"id": 2,"address": "0x04012000","name": "OTAHeader_Bank0_1.0.0.1-00c7120cdd28639656023a45903ab6e8.bin","enable":"1"},
+                    {"id": 3,"address": "0x04013000","name": "Test_sys_patch_MP_master_1.0.64.0_fd47b9b5-cd5b79e4c2273eac4f10002827256539.bin","enable":"1"},
+                    {"id": 4,"address": "0x0401B000","name": "bt_stack_patch_MP_master_0.0.65.0_2cefd1b0-d046a8e759141284dc6461e67bf351b2.bin","enable":"1"},
+                    {"id": 5,"address": "0x0405F000","name": "<ot-cli-ftd.bin>","enable":"0"}]
+        }
+    }
+}
