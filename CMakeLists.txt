@@ -33,6 +33,8 @@ set(RT_PLATFORM_VALUES
     "bee4"
     "bee3plus"
     "rtl8852d"
+    "rtl8922d"
+    "bb2ultra"
 )
 set_property(CACHE RT_PLATFORM PROPERTY STRINGS ${RT_PLATFORM_VALUES})
 if(NOT RT_PLATFORM IN_LIST RT_PLATFORM_VALUES)
@@ -83,15 +85,24 @@ set (matter_enable_rpc $ENV{MATTER_ENABLE_PW_RPC})
 set (matter_enable_shell $ENV{MATTER_ENABLE_SHELL})
 set (matter_enable_otcli $ENV{MATTER_ENABLE_OTCLI})
 set (matter_enable_ota_requestor $ENV{MATTER_ENABLE_OTA_REQUESTOR})
-#set (matter_generate_ota_image $ENV{MATTER_GENERATE_OTA_IMAGE})
 set (matter_enable_persistentstorage_audit $ENV{MATTER_ENABLE_PERSISTENTSTORAGE_AUDIT})
 set (matter_enable_openthread $ENV{MATTER_ENABLE_OPENTHREAD})
+
 if(${OT_CMAKE_NINJA_TARGET} STREQUAL "matter-cli-ftd")
 set (matter_enable_ftd 1)
 endif()
+
 if(${OT_CMAKE_NINJA_TARGET} STREQUAL "matter-cli-mtd")
 set (matter_enable_mtd 1)
+set (matter_enable_med $ENV{MATTER_ENABLE_MED})
 endif()
+
+set (matter_enable_factory_data $ENV{MATTER_ENABLE_FACTORY_DATA})
+if(matter_enable_factory_data GREATER 0)
+    set(matter_enable_factory_data 1)
+    set(matter_dac_key_encryption $ENV{MATTER_DAC_KEY_ENCRYPTION})
+endif()
+
 
 set (openthread_root "${CMAKE_CURRENT_SOURCE_DIR}/openthread")
 

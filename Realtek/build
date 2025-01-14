@@ -114,10 +114,26 @@ is_dual_target()
 
 build_matter()
 {
-    ENABLE_PERSISTENTSTORAGE_AUDIT=0
-    export MATTER_ENABLE_PERSISTENTSTORAGE_AUDIT=$ENABLE_PERSISTENTSTORAGE_AUDIT
-    export BEE_MATTER=${OT_SRCDIR}/../matter/connectedhomeip
+    ENABLE_PERSISTENTSTORAGE_AUDIT=${ENABLE_PERSISTENTSTORAGE_AUDIT:-0}
+    export MATTER_ENABLE_PERSISTENTSTORAGE_AUDIT=$ENABLE_PERSISTENTSTORAGE_AUDIT  
+    export BEE_MATTER=${OT_SRCDIR}/../../../
     export MATTER_CONFIG_PATH=${BEE_MATTER}/config/realtek_bee
+
+    CONFIG_CHIP_FACTORY_DATA=${CONFIG_CHIP_FACTORY_DATA:-0}
+    CONFIG_CHIP_DAC_KEY_ENCRYPTION=${CONFIG_CHIP_DAC_KEY_ENCRYPTION:-0}
+    export MATTER_ENABLE_FACTORY_DATA=$CONFIG_CHIP_FACTORY_DATA
+    export MATTER_DAC_KEY_ENCRYPTION=$CONFIG_CHIP_DAC_KEY_ENCRYPTION
+
+    CONFIG_MED_DEVICE=${CONFIG_MED_DEVICE:-0}
+    if [ "$OT_CMAKE_NINJA_TARGET" == "matter-cli-mtd" ]; then
+        export MATTER_ENABLE_MED=$CONFIG_MED_DEVICE
+    else
+        unset MATTER_ENABLE_MED
+    fi
+
+    #only for signal bank
+    CONFIG_BLE_OTA=${CONFIG_BLE_OTA:-0}
+    export MATTER_ENABLE_BLE_OTA=$CONFIG_BLE_OTA
 
     if is_dual_target; then
         export MATTER_ENABLE_OTA_REQUESTOR=1
@@ -164,25 +180,33 @@ build()
 pre_build()
 {
     if is_create_ld_gen >/dev/null 2>&1; then
-       ${OT_SRCDIR}/Realtek/matter_pre_build ${BUILD_BANK} ${target}
+       ${OT_SRCDIR}/Realtek/pre_build ${BUILD_BANK} ${target}
     fi
 }
 
 post_build()
 {
-    if [ "${OT_CMAKE_NINJA_TARGET}" == "matter-cli-ftd" ]; then
-        ${OT_SRCDIR}/Realtek/matter_after_build ${BUILD_BANK}
-    elif [ "${OT_CMAKE_NINJA_TARGET}" == "matter-cli-mtd" ]; then
-        ${OT_SRCDIR}/Realtek/matter_mtd_after_build ${BUILD_BANK}
-    fi
-
     if is_create_ld_gen >/dev/null 2>&1; then
+        ${OT_SRCDIR}/Realtek/after_build ${BUILD_BANK} ${OT_CMAKE_NINJA_TARGET}
         rm -f $PWD/vendor/${platform}/${target}/*.gen
     fi
 }
 
-main()
+set_sdk_path() 
 {
+   case "${platform}" in
+       bee4)
+           export REALTEK_SDK_PATH="${OT_SRCDIR}/third_party/Realtek/rtl87x2g_sdk/"
+           ;;
+       bee3plus)
+           export REALTEK_SDK_PATH="${OT_SRCDIR}/../../../"
+           ;;
+       *)
+   esac     
+}
+
+main()
+{ 
     local platform="$1"
     local build_type="$2"
     local board_target="$3"
@@ -210,8 +234,39 @@ main()
         fi
     fi
 
+    set_sdk_path
+    
     options+=("-DBUILD_TYPE=${build_type}")
     case "${platform}" in
+        bb2ultra)
+        options+=("${OT_OPTIONS[@]}")
+        options+=("-DOT_NCP_VENDOR_HOOK_SOURCE=$PWD/vendor/${platform}/example_vendor_hook.cpp")
+        options+=("-DRT_PLATFORM=${platform}")
+        options+=("-DBUILD_TARGET=${target}")
+        case "${OT_CMAKE_NINJA_TARGET}" in
+            ot-cli-ftd | ot-cli-mtd)
+                cd ${OT_SRCDIR}/openthread && git checkout thread-reference-20230706 && cd ${OT_SRCDIR}
+                options+=("-DCMAKE_TOOLCHAIN_FILE=vendor/${platform}/arm-none-eabi.cmake")
+                options+=("-DENABLE_CLI=ON")
+                ;;
+            ot-rcp)
+                dos2unix ${OT_SRCDIR}/vendor/bb2ultra/thread-reference-20230706_ot-rcp.patch
+                cd ${OT_SRCDIR}/openthread && git reset --hard HEAD && git checkout thread-reference-20230706 && git apply ../vendor/bb2ultra/thread-reference-20230706_ot-rcp.patch && cd ${OT_SRCDIR}
+                options+=("-DCMAKE_TOOLCHAIN_FILE=vendor/${platform}/arm-none-eabi.cmake")
+                options+=("-DENABLE_CLI=OFF -DOT_DNSSD_SERVER=ON -DOT_SRP_SERVER=ON")
+                ;;
+            *)
+                ;;
+        esac
+        case "${build_type}" in
+            dev)
+                echo "todo: replace mbedtls"
+                ;;
+            *)
+                ;;
+        esac
+        options+=("-DOT_CMAKE_NINJA_TARGET=${OT_CMAKE_NINJA_TARGET}")
+        ;;
         bee4)
         options+=("${OT_OPTIONS[@]}")
         options+=("-DOT_NCP_VENDOR_HOOK_SOURCE=$PWD/vendor/${platform}/example_vendor_hook.cpp")
@@ -274,12 +329,11 @@ main()
         case "${build_type}" in
             dev)
                 rm -Rf ${OT_SRCDIR}/openthread/third_party/mbedtls/repo
-                cd ${OT_SRCDIR}/../mbedtls && tar -zcvf v3.0.0.tar.gz repo && cd ${OT_SRCDIR}
-                tar zxvf ${OT_SRCDIR}/../mbedtls/v3.0.0.tar.gz -C ${OT_SRCDIR}/openthread/third_party/mbedtls/
-                sleep 2
+                cd ${OT_SRCDIR}/third_party/Realtek/rtl87x2g_sdk/subsys/mbedtls && tar -zcvf v3.0.0.tar.gz repo && cd ${OT_SRCDIR}
+                tar zxvf ${OT_SRCDIR}/third_party/Realtek/rtl87x2g_sdk/subsys/mbedtls/v3.0.0.tar.gz -C ${OT_SRCDIR}/openthread/third_party/mbedtls/
                 cp -f ${OT_SRCDIR}/vendor/bee4/common/common.h ${OT_SRCDIR}/openthread/third_party/mbedtls/repo/library/
                 cp -f ${OT_SRCDIR}/vendor/bee4/common/threading_alt.h ${OT_SRCDIR}/openthread/third_party/mbedtls/repo/include/
-                rm ${OT_SRCDIR}/../mbedtls/v3.0.0.tar.gz
+                rm ${OT_SRCDIR}/third_party/Realtek/rtl87x2g_sdk/subsys/mbedtls/v3.0.0.tar.gz
                 ;;
             sdk)
                 options+=("-DOT_EXTERNAL_MBEDTLS=bee4-mbedtls")
@@ -326,7 +380,7 @@ main()
         ;;
     esac
 
-    options+=("$@")
+   options+=("$@")
 
     pre_build
     build "${options[@]}"

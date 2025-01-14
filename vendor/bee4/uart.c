@@ -749,7 +749,7 @@ void uart_init_internal(void)
     UART_Init(OT_UART, &UART_InitStruct);
 
     UART_INTConfig(OT_UART, UART_INT_RD_AVA, ENABLE);
-    UART_INTConfig(OT_UART, UART_INT_RX_IDLE, ENABLE);
+    //UART_INTConfig(OT_UART, UART_INT_RX_IDLE, ENABLE);
     NVIC_InitStruct.NVIC_IRQChannel = OT_UART_IRQN;
     NVIC_InitStruct.NVIC_IRQChannelCmd = (FunctionalState)ENABLE;
     NVIC_InitStruct.NVIC_IRQChannelPriority = 3;
@@ -893,7 +893,7 @@ void OT_UARTIntHandler(void)
     uint16_t len;
 
     UART_INTConfig(OT_UART, UART_INT_RD_AVA, DISABLE);
-
+#if 0
     if (UART_GetFlagStatus(OT_UART, UART_FLAG_RX_IDLE))
     {
         UART_INTConfig(OT_UART, UART_INT_RX_IDLE, DISABLE);
@@ -904,11 +904,8 @@ void OT_UARTIntHandler(void)
             rx_tail = (rx_tail + 1) % kReceiveBufferSize;
         }
         UART_INTConfig(OT_UART, UART_INT_RX_IDLE, ENABLE);
-#if (ENABLE_PW_RPC != 1)
-        otSysEventSignalPending();
-#endif
     }
-
+#endif
     switch (int_status & 0x0E)
     {
     case UART_INT_ID_RX_LEVEL_REACH:
@@ -919,6 +916,9 @@ void OT_UARTIntHandler(void)
             rx_buffer[rx_tail] = OT_UART->UART_RBR_THR;
             rx_tail = (rx_tail + 1) % kReceiveBufferSize;
         }
+#if (ENABLE_PW_RPC != 1)
+        otSysEventSignalPending();
+#endif
         break;
 
     default:

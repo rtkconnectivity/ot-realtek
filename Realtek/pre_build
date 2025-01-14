@@ -1,0 +1,5 @@
+if [ "$1" = "bank0" ]; then
+   arm-none-eabi-gcc -D BUILD_BANK=0 -E -P -x c ./vendor/bee4/$2/app.ld -o ./vendor/bee4/$2/app.ld.gen
+elif [ "$1" = "bank1" ]; then
+   arm-none-eabi-gcc -D BUILD_BANK=1 -E -P -x c ./vendor/bee4/$2/app.ld -o ./vendor/bee4/$2/app.ld.gen
+fi

@@ -32,14 +32,8 @@
 #include "rtl_uart.h"
 #include "rtl_tim.h"
 #include "rtl_nvic.h"
-
 #include "zb_tst_cfg.h"
-
 #include "dbg_printf.h"
-
-//extern void shell_cmd_init(void);
-//extern void otPlatFlashErase(uint32_t *, uint8_t);
-//extern int32_t matter_kvs_clean(void);
 
 /** @addtogroup  MAC_TASK_DEMO
     * @{
@@ -51,6 +45,15 @@
     * Create App task and handle events & messages
     * @{
     */
+
+/*============================================================================*
+ *                              Macros
+ *============================================================================*/
+#ifdef BOARD_RTL8777G
+#define OTA_SEL_PIN P9_0 // RTL8777G dongle SW2
+#else
+#define OTA_SEL_PIN P3_5 // EVB Key4
+#endif
 
 /*============================================================================*
  *                              Variables
@@ -68,14 +71,13 @@ void *matter_task_handle;   //!< MAC Task handle
 void bee_mutex_init(mbedtls_threading_mutex_t *mutex)
 {
     os_mutex_create(&mutex->mutex);
-    if (mutex->mutex) mutex->flag = 1;
-    else mutex->flag = 0;
+    if (mutex->mutex) { mutex->flag = 1; }
+    else { mutex->flag = 0; }
 }
 
 void bee_mutex_free(mbedtls_threading_mutex_t *mutex)
 {
-    os_mutex_create(&mutex->mutex);
-    if (mutex->flag)
+    if (mutex != NULL && mutex->mutex != NULL && mutex->flag)
     {
         os_mutex_delete(mutex->mutex);
         mutex->flag = 0;

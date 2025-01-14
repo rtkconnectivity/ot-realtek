@@ -18,61 +18,61 @@ extern "C" {
 /*============================================================================*
 *                        Flash Layout
 *============================================================================*/
-/*  Flash total size                                2048KB
+/*  Flash total size                                4096KB
 example:
-	1) Reserved:                                          4K (0x04000000)
-	2) Factory Data:                                      4K (0x04000000)
-	3) OEM Header:                                        4K (0x04001000)
-	4) Bank0 Boot Patch Code:                            32K (0x04002000)
-	5) Bank1 Boot Patch Code:                            32K (0x0400A000)
-	6) OTA Bank0:                                      1332K (0x04012000)
-		a) OTA Header                    4K (0x04012000)
-		b) System Patch code            32K (0x04013000)
-		c) BT Stack Patch code          60K (0x0401B000)
-		d) BT Host code                212K (0x0402A000)
-		e) APP code                   1024K (0x0405F000)
-		f) APP Config File               0K (0x0415F000)
-		g) APP data1                     0K (0x0415F000)
-		h) APP data2                     0K (0x0415F000)
-		i) APP data3                     0K (0x0415F000)
-		j) APP data4                     0K (0x0415F000)
-		k) APP data5                     0K (0x0415F000)
-		l) APP data6                     0K (0x0415F000)
-	7) OTA Bank1:                                         0K (0x0415F000)
-		a) OTA Header                    0K (0x00000000)
-		b) System Patch code             0K (0x00000000)
-		c) BT Stack Patch code           0K (0x00000000)
-		d) BT Host code                  0K (0x00000000)
-		e) APP code                      0K (0x00000000)
-		f) APP Config File               0K (0x00000000)
-		g) APP data1                     0K (0x00000000)
-		h) APP data2                     0K (0x00000000)
-		i) APP data3                     0K (0x00000000)
-		j) APP data4                     0K (0x00000000)
-		k) APP data5                     0K (0x00000000)
-		l) APP data6                     0K (0x00000000)
-	8) Bank0 Secure APP Code:                            16K (0x0415F000)
-	9) Bank0 Secure APP Data:                             0K (0x04163000)
-	10) Bank1 Secure APP Code:                            0K (0x04163000)
-	11) Bank1 Secure APP Data:                            0K (0x04163000)
-	12) RO DATA1:                                         0K (0x04163000)
-	13) RO DATA2:                                         0K (0x04163000)
-	14) RO DATA3:                                         0K (0x04163000)
-	15) RO DATA4:                                         0K (0x04163000)
-	16) RO DATA5:                                         0K (0x04163000)
-	17) RO DATA6:                                         0K (0x04163000)
-	18) OTA Tmp:                                        560K (0x04163000)
-	19) FTL:                                             16K (0x041EF000)
-	20) user data1:                                       0K (0x041F3000)
-	21) user data2:                                       0K (0x041F3000)
-	22) user data3:                                       0K (0x041F3000)
-	23) user data4:                                       0K (0x041F3000)
-	24) user data5:                                       0K (0x041F3000)
-	25) user data6:                                       0K (0x041F3000)
-	26) user data7:                                       0K (0x041F3000)
-	27) user data8:                                       0K (0x041F3000)
-	29) APP Defined Section1:                            40K (0x041F3000)
-	2:) APP Defined Section2:                             0K (0x041FD000)
+    1) Reserved:                                          4K (0x04000000)
+    2) Factory Data:                                      4K (0x04000000)
+    3) OEM Header:                                        4K (0x04001000)
+    4) Bank0 Boot Patch Code:                            32K (0x04002000)
+    5) Bank1 Boot Patch Code:                            32K (0x0400A000)
+    6) OTA Bank0:                                      1332K (0x04012000)
+        a) OTA Header                    4K (0x04012000)
+        b) System Patch code            32K (0x04013000)
+        c) BT Stack Patch code          60K (0x0401B000)
+        d) BT Host code                212K (0x0402A000)
+        e) APP code                   1024K (0x0405F000)
+        f) APP Config File               0K (0x0415F000)
+        g) APP data1                     0K (0x0415F000)
+        h) APP data2                     0K (0x0415F000)
+        i) APP data3                     0K (0x0415F000)
+        j) APP data4                     0K (0x0415F000)
+        k) APP data5                     0K (0x0415F000)
+        l) APP data6                     0K (0x0415F000)
+    7) OTA Bank1:                                         0K (0x0415F000)
+        a) OTA Header                    0K (0x00000000)
+        b) System Patch code             0K (0x00000000)
+        c) BT Stack Patch code           0K (0x00000000)
+        d) BT Host code                  0K (0x00000000)
+        e) APP code                      0K (0x00000000)
+        f) APP Config File               0K (0x00000000)
+        g) APP data1                     0K (0x00000000)
+        h) APP data2                     0K (0x00000000)
+        i) APP data3                     0K (0x00000000)
+        j) APP data4                     0K (0x00000000)
+        k) APP data5                     0K (0x00000000)
+        l) APP data6                     0K (0x00000000)
+    8) Bank0 Secure APP Code:                            16K (0x0415F000)
+    9) Bank0 Secure APP Data:                             0K (0x04163000)
+    10) Bank1 Secure APP Code:                            0K (0x04163000)
+    11) Bank1 Secure APP Data:                            0K (0x04163000)
+    12) RO DATA1:                                         0K (0x04163000)
+    13) RO DATA2:                                         0K (0x04163000)
+    14) RO DATA3:                                         0K (0x04163000)
+    15) RO DATA4:                                         0K (0x04163000)
+    16) RO DATA5:                                         0K (0x04163000)
+    17) RO DATA6:                                         0K (0x04163000)
+    18) OTA Tmp:                                       1024K (0x04163000)
+    19) FTL:                                             16K (0x04263000)
+    20) user data1:                                       0K (0x04267000)
+    21) user data2:                                       0K (0x04267000)
+    22) user data3:                                       0K (0x04267000)
+    23) user data4:                                       0K (0x04267000)
+    24) user data5:                                       0K (0x04267000)
+    25) user data6:                                       0K (0x04267000)
+    26) user data7:                                       0K (0x04267000)
+    27) user data8:                                       0K (0x04267000)
+    29) APP Defined Section1:                            40K (0x04267000)
+    2:) APP Defined Section2:                             0K (0x04271000)
 */
 
 /*============================================================================*
@@ -80,7 +80,7 @@ example:
 *============================================================================*/
 
 #define FLASH_START_ADDR                0x04000000  //Fixed
-#define FLASH_MAX_SIZE                  0x00200000  //2048K Bytes
+#define FLASH_MAX_SIZE                  0x00400000  //4096K Bytes
 
 /* ========== High Level Flash Layout Configuration ========== */
 #define FACTORY_DATA_ADDR               0x04000000
@@ -116,28 +116,28 @@ example:
 #define RO_DATA6_ADDR                   0x04163000
 #define RO_DATA6_SIZE                   0x00000000  //0K Bytes
 #define OTA_TMP_ADDR                    0x04163000
-#define OTA_TMP_SIZE                    0x0008C000  //560K Bytes
-#define FTL_ADDR                        0x041EF000
+#define OTA_TMP_SIZE                    0x00100000  //1024K Bytes
+#define FTL_ADDR                        0x04263000
 #define FTL_SIZE                        0x00004000  //16K Bytes
-#define USER_DATA1_ADDR                 0x041F3000
+#define USER_DATA1_ADDR                 0x04267000
 #define USER_DATA1_SIZE                 0x00000000  //0K Bytes
-#define USER_DATA2_ADDR                 0x041F3000
+#define USER_DATA2_ADDR                 0x04267000
 #define USER_DATA2_SIZE                 0x00000000  //0K Bytes
-#define USER_DATA3_ADDR                 0x041F3000
+#define USER_DATA3_ADDR                 0x04267000
 #define USER_DATA3_SIZE                 0x00000000  //0K Bytes
-#define USER_DATA4_ADDR                 0x041F3000
+#define USER_DATA4_ADDR                 0x04267000
 #define USER_DATA4_SIZE                 0x00000000  //0K Bytes
-#define USER_DATA5_ADDR                 0x041F3000
+#define USER_DATA5_ADDR                 0x04267000
 #define USER_DATA5_SIZE                 0x00000000  //0K Bytes
-#define USER_DATA6_ADDR                 0x041F3000
+#define USER_DATA6_ADDR                 0x04267000
 #define USER_DATA6_SIZE                 0x00000000  //0K Bytes
-#define USER_DATA7_ADDR                 0x041F3000
+#define USER_DATA7_ADDR                 0x04267000
 #define USER_DATA7_SIZE                 0x00000000  //0K Bytes
-#define USER_DATA8_ADDR                 0x041F3000
+#define USER_DATA8_ADDR                 0x04267000
 #define USER_DATA8_SIZE                 0x00000000  //0K Bytes
-#define BKP_DATA1_ADDR                  0x041F3000
+#define BKP_DATA1_ADDR                  0x04267000
 #define BKP_DATA1_SIZE                  0x0000A000  //40K Bytes
-#define BKP_DATA2_ADDR                  0x041FD000
+#define BKP_DATA2_ADDR                  0x04271000
 #define BKP_DATA2_SIZE                  0x00000000  //0K Bytes
 
 /* ========== OTA Bank0 Flash Layout Configuration ========== */

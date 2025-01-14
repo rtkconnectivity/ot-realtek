@@ -973,7 +973,7 @@ static int _vsnprintf(out_fct_type out, char *buffer, const size_t maxlen, const
 /*****************************************************************************
  * PRINTF You must write your own putchar()
  *****************************************************************************/
-#include "nonsecure_rom_cfg.h"
+//#include "nonsecure_rom_cfg.h"
 #include "os_sync.h"
 #include "trace.h"
 #include "app_section.h"
@@ -1016,73 +1016,7 @@ int dbg_vprintf(const char * module, const char *format, va_list va)
 #else
 int dbg_vprintf(const char * module, const char *format, va_list va)
 {
-    uint32_t info;
-    uint16_t log_length;
-    int16_t  fmt_length;
-    va_list  ap;
-    uint32_t  s;
-
-    /**
-     * Byte: Description
-     * 0:    Sync(0x7E)
-     * 1:    Length
-     * 2:    SeqNum
-     * 3:    CheckSum
-     * 4:    version
-     * 5:    reserved
-     * 6:    type
-     * 7:    subtype: SUBTYPE_TEXT
-     * 8-11:  Timestamp
-     * 12:
-            0~5: module
-            6~7: level
-    * 13:     Format String
-     */
-
-    if (boot_cfg.common.logDisable || boot_cfg.common.directlogDisable)
-    {
-        return 0;
-    }
-
-    uint8_t *p_mask = (uint8_t *)trace_mask;
-
-    if (module)
-    {
-        info = COMBINE_TRACE_INFO(LOG_TYPE, SUBTYPE_TEXT, MODULE_MATTER, LEVEL_ERROR);
-    }
-    else
-    {
-        info = COMBINE_TRACE_INFO(LOG_TYPE, SUBTYPE_TEXT, MODULE_THREAD, LEVEL_ERROR);
-    }
-
-    if ((p_mask[GET_MODULE(info) >> 3] & (1 << (GET_MODULE(info) % 8))) == 0)
-    {
-        return 0;
-    }
-
-    s = os_lock();
-    fill_log_data((uint8_t *)logbuf, info);
-
-    log_length = 13;
-
-    if (module)
-    {
-        fmt_length = dbg_snprintf(&logbuf[log_length], 256 - log_length, "[%s] ", module);
-        fmt_length += _vsnprintf(_out_buffer, &logbuf[log_length + fmt_length], 256 - log_length - fmt_length, format, va);
-    }
-    else
-    {
-        fmt_length = _vsnprintf(_out_buffer, &logbuf[log_length], 256-log_length, format, va);
-    }
-
-    log_length += fmt_length;
-    logbuf[1] = log_length;
-    logbuf[2] = log_seq_num++;
-    logbuf[3] = logbuf[0] ^ logbuf[1] ^ logbuf[2];
-
-    os_unlock(s);
-    log_output(logbuf);
-    return log_length;
+    return 0;
 }
 #endif
 

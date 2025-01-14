@@ -51,13 +51,12 @@ void otPlatReset(otInstance *aInstance)
     if (pan_idx == 0)
     {
         gPlatformPseudoResetLevel++;
-        otTaskletsSignalPending(NULL);
     }
     else
     {
         gPlatformPseudoResetLevel_zb++;
-        zbTaskletsSignalPending(NULL);
     }
+    otTaskletsSignalPending(NULL);
 }
 
 #endif

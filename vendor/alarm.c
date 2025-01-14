@@ -37,10 +37,7 @@
 
 #include "platform-bee.h"
 #include "mac_driver.h"
-#ifdef RT_PLATFORM_BB2ULTRA
-#else
 #include "mac_driver_mpan.h"
-#endif
 #include "common/logging.hpp"
 #include <openthread/config.h>
 #include <openthread/platform/alarm-micro.h>
@@ -93,7 +90,7 @@ void otPlatAlarmMicroStartAt(otInstance *aInstance, uint32_t t0, uint32_t dt)
         }
         else
         {
-            zbTaskletsSignalPending(NULL);
+            otTaskletsSignalPending(NULL);
         }
     }
 #endif
@@ -153,7 +150,7 @@ void otPlatAlarmMilliStartAt(otInstance *aInstance, uint32_t t0, uint32_t dt)
         }
         else
         {
-            zbTaskletsSignalPending(NULL);
+            otTaskletsSignalPending(NULL);
         }
     }
 #endif

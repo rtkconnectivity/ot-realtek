@@ -131,6 +131,25 @@ void zb_pin_mux_init(void)
 #endif
 }
 
+void io_uart_dlps_enter(void)
+{
+    /* Notes: DBG_DIRECT is only used in debug demo, do not use in app project.*/
+    //DBG_DIRECT("DLPS ENTER");
+    /* Switch pad to Software mode */
+    Pad_ControlSelectValue(ZB_CLI_UART_TX_PIN, PAD_SW_MODE);
+    Pad_ControlSelectValue(ZB_CLI_UART_RX_PIN, PAD_SW_MODE);
+
+    System_WakeUpPinEnable(ZB_CLI_UART_RX_PIN, PAD_WAKEUP_POL_LOW, PAD_WAKEUP_DEB_DISABLE);
+}
+
+void io_uart_dlps_exit(void)
+{
+    /* Notes: DBG_DIRECT is only used in debug demo, do not use in app project.*/
+    //DBG_DIRECT("DLPS EXIT");
+    Pad_ControlSelectValue(ZB_CLI_UART_TX_PIN, PAD_PINMUX_MODE);
+    Pad_ControlSelectValue(ZB_CLI_UART_RX_PIN, PAD_PINMUX_MODE);
+}
+
 /**
  * @brief    Contains the initialization of peripherals
  * @note     Both new architecture driver and legacy driver initialization method can be used
@@ -198,7 +217,6 @@ void zb_mac_drv_init(void)
     mac_Enable();
     mac_Initialize(&drv, &attr);
     mac_Initialize_Additional();
-    mac_SetCcaMode(MAC_CCA_ED);
 }
 
 typedef void (*bt_hci_reset_handler_t)(void);
@@ -210,6 +228,7 @@ void zb_mac_drv_enable(void)
     mac_RegisterBtHciResetHanlder(zb_mac_drv_init);
     mac_RegisterCallback(NULL, edscan_level2dbm, set_zigbee_priority,
                          *modem_set_zb_cca_combination);
+    mac_SetCcaMode(MAC_CCA_CS_ED_AND);
 }
 
 extern void mac_Initialize_Patch(void);

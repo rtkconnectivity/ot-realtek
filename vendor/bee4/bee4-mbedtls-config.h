@@ -10,6 +10,15 @@
 #define MBEDTLS_X509_CSR_PARSE_C
 #define MBEDTLS_X509_CSR_WRITE_C
 #define MBEDTLS_X509_CREATE_C
+#define MBEDTLS_RSA_C
+#define MBEDTLS_PKCS1_V21
+#define MBEDTLS_PKCS1_V15
+#define MBEDTLS_CTR_DRBG_C
+
+#ifdef MBEDTLS_MPI_MAX_SIZE
+#undef MBEDTLS_MPI_MAX_SIZE
+#define MBEDTLS_MPI_MAX_SIZE              1024 /**< Maximum number of bytes for usable MPIs. */
+#endif
 
 #define MBEDTLS_THREADING_C
 #define MBEDTLS_THREADING_ALT

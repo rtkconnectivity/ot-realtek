@@ -24,10 +24,7 @@ list (
         "${openthread_root}/examples/platforms"
         "${openthread_root}/examples/platforms/utils"
         "${openthread_root}/cli"
-         "${REALTEK_SDK_ROOT}/subsys/mbedtls"
-         "${REALTEK_SDK_ROOT}/subsys/mbedtls/repo/include"
-         "${REALTEK_SDK_ROOT}/subsys/mbedtls/repo/library"
-        #"${openthread_root}/third_party/mbedtls/"
-        #"${openthread_root}/third_party/mbedtls/repo/include"
-        #"${openthread_root}/third_party/mbedtls/repo/library"
+        "${REALTEK_SDK_ROOT}/subsys/mbedtls"
+        "${REALTEK_SDK_ROOT}/subsys/mbedtls/repo/include"
+        "${REALTEK_SDK_ROOT}/subsys/mbedtls/repo/library"
 )

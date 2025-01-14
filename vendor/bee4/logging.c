@@ -47,7 +47,11 @@ void otPlatLog(otLogLevel aLogLevel, otLogRegion aLogRegion, const char *aFormat
 {
     va_list ap;
     va_start(ap, aFormat);
+#ifdef BUILD_CERT
     dbg_vprintf(NULL, aFormat, ap);
+#else
+    DBG_TEXT_COMBINE_LEVEL_ERROR(MODULE_THREAD, NULL, aFormat, ap);
+#endif
     va_end(ap);
 }
 #endif

@@ -92,6 +92,7 @@ void BEE_RadioInit(uint8_t pan_idx);
  */
 void BEE_EventProcess(otInstance *aInstance, uint8_t pan_idx);
 void BEE_SleepProcess(otInstance *aInstance, uint8_t pan_idx);
+void BEE_SleepDone(uint8_t pan_idx);
 /**
  * This function initializes the random number service used by OpenThread.
  *
@@ -162,8 +163,9 @@ extern void mac_EDScan_end(uint8_t *peak_value);
 extern bool mac_GetTxNTermedStatus(void);
 extern uint32_t mac_GetTxMStatus(void);
 extern void mac_PTA_Wrokaround(void);
-extern uint8_t *mac_RxBufferAlloc(void);
-extern void mac_RxBufferFree(uint8_t *psdu);
+int8_t mac_edscan_level2dbm(uint8_t level);
+uint8_t mac_edscan_dbm2level(int8_t dbm);
+uint8_t mac_GetCcaEDThreshold_patch(void);
 
 void zbSysInit(int argc, char *argv[]);
 bool zbSysPseudoResetWasRequested(void);
