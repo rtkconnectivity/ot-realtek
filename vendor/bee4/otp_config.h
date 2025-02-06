@@ -1,6 +1,6 @@
 /**
 *****************************************************************************************
-*     Copyright(c) 2023, Realtek Semiconductor Corporation. All rights reserved.
+*     Copyright(c) 2025, Realtek Semiconductor Corporation. All rights reserved.
 *****************************************************************************************
   * @file    otp_config.h
   * @brief   Update Configuration in APP
@@ -8,7 +8,7 @@
   * @version v1.0
   * *************************************************************************************
    * @attention
-   * <h2><center>&copy; COPYRIGHT 2023 Realtek Semiconductor Corporation</center></h2>
+   * <h2><center>&copy; COPYRIGHT 2025 Realtek Semiconductor Corporation</center></h2>
    * *************************************************************************************
   */
 

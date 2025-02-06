@@ -1,6 +1,6 @@
 /**
 *****************************************************************************************
-*     Copyright(c) 2022, Realtek Semiconductor Corporation. All rights reserved.
+*     Copyright(c) 2025, Realtek Semiconductor Corporation. All rights reserved.
 *****************************************************************************************
 * @file    flash_map.h
 * @brief   Flash Layout Configuration, and flash layout must be changed with config file!

@@ -1,6 +1,6 @@
 /**
 *****************************************************************************************
-*     Copyright(c) 2021, Realtek Semiconductor Corporation. All rights reserved.
+*     Copyright(c) 2025, Realtek Semiconductor Corporation. All rights reserved.
 *****************************************************************************************
    * @file
    * @brief
@@ -10,7 +10,7 @@
    * @version
    **************************************************************************************
    * @attention
-   * <h2><center>&copy; COPYRIGHT 2021 Realtek Semiconductor Corporation</center></h2>
+   * <h2><center>&copy; COPYRIGHT 2025 Realtek Semiconductor Corporation</center></h2>
    * *************************************************************************************
   */
 #include <locale.h>

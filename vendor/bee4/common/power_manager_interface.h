@@ -1,6 +1,6 @@
 /**
 *********************************************************************************************************
-*               Copyright(c) 2021, Realtek Semiconductor Corporation. All rights reserved.
+*               Copyright(c) 2025, Realtek Semiconductor Corporation. All rights reserved.
 *********************************************************************************************************
 * @file         power_manager_interface.h
 * @brief        Power Manager Interface implementation head file.
