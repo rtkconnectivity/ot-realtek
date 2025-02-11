@@ -1,11 +1,6 @@
 #!/bin/bash
 
-cp -f vendor/bee4/$1/*.ini build/ota/
-cp -f vendor/bee4/$1/firmware/bank0/* build/ota/
-cp -f vendor/bee4/$1/firmware/bank1/* build/ota/
-cp -f build/bin/*MP_dev*.bin build/ota/
-
-PROJECT_CONFIG=../matter/connectedhomeip/examples/$2/realtek_bee/main/include/CHIPProjectConfig.h
+PROJECT_CONFIG=${BEE_MATTER}/examples/$2/realtek_bee/main/include/CHIPProjectConfig.h
 VENDOR_ID=$(awk '/#define CHIP_DEVICE_CONFIG_DEVICE_VENDOR_ID/{print $3}' ${PROJECT_CONFIG})
 PRODUCT_ID=$(awk '/#define CHIP_DEVICE_CONFIG_DEVICE_PRODUCT_ID/{print $3}' ${PROJECT_CONFIG})
 VERSION=$(awk '/#define CHIP_DEVICE_CONFIG_DEVICE_SOFTWARE_VERSION/{print $3; exit}' ${PROJECT_CONFIG})
@@ -16,14 +11,25 @@ echo "PRODUCT_ID=${PRODUCT_ID}"
 echo "VERSION=${VERSION}"
 echo "VERSION_STR=${VERSION_STR}"
 
-chmod +x tools/FlashMapGenerateCli
-chmod +x tools/PackCli
+chmod +x ${OT_SRCDIR}/tools/FlashMapGenerateCli
+chmod +x ${OT_SRCDIR}/tools/PackCli
 
-tools/FlashMapGenerateCli build/ota $3 build/ota
+if [ $1 == "evb_dual" ] || [ $1 == "rtl8777g_dual" ]; then
+    cp -f ${OT_SRCDIR}/vendor/bee4/$1/*.ini ${OUT_FOLDER}/ota/
+    cp -f ${OT_SRCDIR}/vendor/bee4/$1/firmware/bank0/* ${OUT_FOLDER}/ota/
+    cp -f ${OT_SRCDIR}/vendor/bee4/$1/firmware/bank1/* ${OUT_FOLDER}/ota/
+    cp -f build/bin/*MP_dev*.bin ${OUT_FOLDER}/ota/
 
-tools/PackCli 8772gwp ota build/ota build
+    ${OT_SRCDIR}/tools/FlashMapGenerateCli ${OUT_FOLDER}/ota $3 ${OUT_FOLDER}/ota
+else
+    cp -f ${OT_SRCDIR}/vendor/bee4/$1/*.ini ${OUT_FOLDER}/ota/
+    cp -f ${OUT_FOLDER}/bin/*MP_dev*.bin ${OUT_FOLDER}/ota/
+fi
 
-../matter/connectedhomeip/src/app/ota_image_tool.py create -v ${VENDOR_ID} -p ${PRODUCT_ID} -vn ${VERSION} -vs ${VERSION_STR} -da sha256 build/ota/ImgPacketFile*.bin build/ota/matter.ota
+rm -rf ${OUT_FOLDER}/ota/*.ota
+${OT_SRCDIR}/tools/PackCli 8772gwp ota ${OUT_FOLDER}/ota ${OUT_FOLDER}
 
-rm -rf build/ota/*.bin
-rm -rf build/ota/*.ini
+${BEE_MATTER}/src/app/ota_image_tool.py create -v ${VENDOR_ID} -p ${PRODUCT_ID} -vn ${VERSION} -vs ${VERSION_STR} -da sha256 ${OUT_FOLDER}/ota/ImgPacketFile*.bin ${OUT_FOLDER}/ota/matter.ota
+
+rm -rf ${OUT_FOLDER}/ota/*.bin
+rm -rf ${OUT_FOLDER}/ota/*.ini

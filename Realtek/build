@@ -29,9 +29,10 @@
 
 set -euxo pipefail
 
+export OT_SRCDIR="$(pwd)"
+export OUT_FOLDER="${OT_SRCDIR}/${OT_CMAKE_BUILD_DIR:-build}"
 OT_CMAKE_NINJA_TARGET=${OT_CMAKE_NINJA_TARGET:-}
 
-readonly OT_SRCDIR="$(pwd)"
 readonly OT_OPTIONS=(
     "-DCMAKE_BUILD_TYPE=Release"
     "-DOT_PLATFORM=external"
@@ -161,10 +162,8 @@ build_matter()
 
 build()
 {
-    local builddir="${OT_CMAKE_BUILD_DIR:-build}"
-
-    mkdir -p "${builddir}"
-    cd "${builddir}"
+    mkdir -p "${OUT_FOLDER}"
+    cd "${OUT_FOLDER}"
 
     cmake -GNinja -DOT_COMPILE_WARNING_AS_ERROR=ON "$@" "${OT_SRCDIR}"
 
@@ -187,8 +186,8 @@ pre_build()
 post_build()
 {
     if is_create_ld_gen >/dev/null 2>&1; then
-        ${OT_SRCDIR}/Realtek/after_build ${BUILD_BANK} ${OT_CMAKE_NINJA_TARGET}
-        rm -f $PWD/vendor/${platform}/${target}/*.gen
+        ${OT_SRCDIR}/Realtek/post_build ${BUILD_BANK} ${OT_CMAKE_NINJA_TARGET}
+        rm -f ${OT_SRCDIR}/vendor/${platform}/${target}/*.gen
     fi
 }
 
@@ -400,18 +399,21 @@ main()
 
     #for bank1 build
     if is_dual_target >/dev/null 2>&1;then
-        rm -rf bank0
-        mv build bank0
-        mkdir -p build/ota
-        cp -f bank0/bin/*MP_dev*.bin build/ota/
-        mv bank0 build
+        rm -rf ${OUT_FOLDER}/bank0
+        mv ${OUT_FOLDER}/build ${OUT_FOLDER}/bank0
+        mkdir -p ${OUT_FOLDER}/ota
+        cp -f ${OUT_FOLDER}/bank0/bin/*MP_dev*.bin ${OUT_FOLDER}/ota/
+        mv ${OUT_FOLDER}/bank0 ${OUT_FOLDER}/build
 
         BUILD_BANK="bank1"
         pre_build
         build "${options[@]}"
         post_build
 
-        ${OT_SRCDIR}/Realtek/matter_ota_pack ${target} ${APP_SELECT} ${OTA_VERSION}
+        ${OT_SRCDIR}/Realtek/matter_ota_pack ${target} ${APP_NAME} ${OTA_VERSION}
+    elif [ ${MATTER_ENABLE_OTA_REQUESTOR} -eq 1 ]; then
+        mkdir -p ${OUT_FOLDER}/ota
+        ${OT_SRCDIR}/Realtek/matter_ota_pack ${target} ${APP_NAME}
     fi
 }
 
