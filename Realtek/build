@@ -32,6 +32,7 @@ set -euxo pipefail
 export OT_SRCDIR="$(pwd)"
 export OUT_FOLDER="${OT_SRCDIR}/${OT_CMAKE_BUILD_DIR:-build}"
 OT_CMAKE_NINJA_TARGET=${OT_CMAKE_NINJA_TARGET:-}
+export MATTER_ENABLE_OTA_REQUESTOR=0
 
 readonly OT_OPTIONS=(
     "-DCMAKE_BUILD_TYPE=Release"
