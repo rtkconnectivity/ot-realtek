@@ -78,9 +78,9 @@ add_library(bee4-mbedtls INTERFACE)
 
 target_link_libraries(bee4-mbedtls
     INTERFACE
-        ${PROJECT_SOURCE_DIR}/lib/bee4/libmbedtls.a
-        ${PROJECT_SOURCE_DIR}/lib/bee4/libmbedx509.a
-        ${PROJECT_SOURCE_DIR}/lib/bee4/libmbedcrypto.a
+        ${REALTEK_SDK_ROOT}/lib/bee4/libmbedtls.a
+        ${REALTEK_SDK_ROOT}/lib/bee4/libmbedx509.a
+        ${REALTEK_SDK_ROOT}/lib/bee4/libmbedcrypto.a
 )
 
 target_include_directories(ot-config
@@ -138,7 +138,7 @@ set_target_properties(
 target_link_directories(openthread-bee4
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/${BUILD_TARGET}
-        ${PROJECT_SOURCE_DIR}/lib/${RT_PLATFORM}
+        ${REALTEK_SDK_ROOT}/lib/${RT_PLATFORM}
         ${REALTEK_SDK_ROOT}/subsys/lwip/for_matter/lib
 )
 
@@ -247,10 +247,10 @@ if(${BUILD_TYPE} STREQUAL "dev")
 add_custom_command(
     TARGET openthread-bee4
     POST_BUILD
-    COMMAND cp -f ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libbee4-internal.a ${PROJECT_SOURCE_DIR}/lib/${RT_PLATFORM}/
-    COMMAND cp -f ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libmbedcrypto.a ${PROJECT_SOURCE_DIR}/lib/${RT_PLATFORM}/
-    COMMAND cp -f ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libmbedtls.a ${PROJECT_SOURCE_DIR}/lib/${RT_PLATFORM}/
-    COMMAND cp -f ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libmbedx509.a ${PROJECT_SOURCE_DIR}/lib/${RT_PLATFORM}/
+    COMMAND cp -f ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libbee4-internal.a ${REALTEK_SDK_ROOT}/lib/${RT_PLATFORM}/
+    COMMAND cp -f ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libmbedcrypto.a ${REALTEK_SDK_ROOT}/lib/${RT_PLATFORM}/
+    COMMAND cp -f ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libmbedtls.a ${REALTEK_SDK_ROOT}/lib/${RT_PLATFORM}/
+    COMMAND cp -f ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libmbedx509.a ${REALTEK_SDK_ROOT}/lib/${RT_PLATFORM}/
     COMMAND [ -f ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/liblwip.a ] && cp -f ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/liblwip.a ${REALTEK_SDK_ROOT}/subsys/lwip/for_matter/lib/ || echo "liblwip.a not exist"
     COMMAND cd ${PROJECT_SOURCE_DIR}/openthread && git reset --hard HEAD && git clean -f -d
 )
@@ -466,7 +466,7 @@ if(${BUILD_TYPE} STREQUAL "dev")
 add_custom_command(
     TARGET matter-cli-mtd
     POST_BUILD
-    COMMAND cp -f ${PROJECT_SOURCE_DIR}/vendor/bee4/common/threading_alt.h ${REALTEK_SDK_ROOT}/subsys/mbedtls/repo/include/
+    COMMAND cp -f ${PROJECT_SOURCE_DIR}/src/bee4/common/threading_alt.h ${REALTEK_SDK_ROOT}/subsys/mbedtls/repo/include/
    # COMMAND cp -f ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libbee4-internal.a ${REALTEK_SDK_ROOT}/subsys/matter/lib/rtl87x2g/
     COMMAND cp -f ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libchip_main.a ${REALTEK_SDK_ROOT}/subsys/matter/lib/rtl87x2g/
     COMMAND cp -f ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libcli_uart.a ${REALTEK_SDK_ROOT}/subsys/matter/lib/rtl87x2g/
@@ -506,7 +506,7 @@ if(${OT_CMAKE_NINJA_TARGET} STREQUAL "ot-cli-ftd")
 if(${BUILD_BOARD_TARGET} STREQUAL "rtl8777g_test")
 target_sources(ot-cli-ftd
     PRIVATE
-    ${REALTEK_SDK_ROOT}/../../../vendor/bee4/rtl8777g_test/main.c
+    ${REALTEK_SDK_ROOT}/../../../src/bee4/rtl8777g_test/main.c
     ${REALTEK_SDK_ROOT}/bsp/power/io_dlps.c
     ${REALTEK_SDK_ROOT}/subsys/bluetooth/gatt_profile/src/server/bas.c
     ${REALTEK_SDK_ROOT}/subsys/zb-mac-test/test/rtk_mac/simple_ble_service_nus.c
@@ -518,7 +518,7 @@ target_sources(ot-cli-ftd
 
 target_include_directories(ot-cli-ftd
     PRIVATE
-        ${REALTEK_SDK_ROOT}/../../../vendor/bee4/${BUILD_TARGET}
+        ${REALTEK_SDK_ROOT}/../../../src/bee4/${BUILD_TARGET}
         ${REALTEK_SDK_ROOT}/bsp/driver/ir/inc
         ${REALTEK_SDK_ROOT}/subsys/bluetooth/gatt_profile/inc/server
         ${REALTEK_SDK_ROOT}/subsys/zb-mac-test/test/rtk_mac
@@ -534,12 +534,12 @@ target_compile_options(ot-cli-ftd
 else()
 target_sources(ot-cli-ftd
     PRIVATE
-    ${REALTEK_SDK_ROOT}/../../../vendor/bee4/main_ns.c
+    ${REALTEK_SDK_ROOT}/../../../src/bee4/main_ns.c
 )
 
 target_include_directories(ot-cli-ftd
     PRIVATE
-        ${REALTEK_SDK_ROOT}/../../../vendor/bee4/${BUILD_TARGET}
+        ${REALTEK_SDK_ROOT}/../../../src/bee4/${BUILD_TARGET}
 )
 endif()
 target_compile_definitions(ot-cli-ftd
@@ -555,13 +555,13 @@ endif()
 if(${OT_CMAKE_NINJA_TARGET} STREQUAL "ot-cli-mtd")
 target_sources(ot-cli-mtd
     PRIVATE
-    ${REALTEK_SDK_ROOT}/../../../vendor/bee4/main_ns.c
+    ${REALTEK_SDK_ROOT}/../../../src/bee4/main_ns.c
     ${REALTEK_SDK_ROOT}/bsp/power/io_dlps.c
 )
 
 target_include_directories(ot-cli-mtd
     PRIVATE
-        ${REALTEK_SDK_ROOT}/../../../vendor/bee4/${BUILD_TARGET}
+        ${REALTEK_SDK_ROOT}/../../../src/bee4/${BUILD_TARGET}
 )
 
 target_compile_definitions(ot-cli-mtd
@@ -595,7 +595,7 @@ add_library(rtk_sign
 
 target_include_directories(rtk_sign
     PRIVATE
-    ${PROJECT_SOURCE_DIR}/vendor/bee4/internal/rtk_sign
+    ${PROJECT_SOURCE_DIR}/src/bee4/internal/rtk_sign
     ${REALTEK_SDK_INCPATH}
     ${REALTEK_SDK_ROOT}/subsys/osif/inc
     ${REALTEK_SDK_ROOT}/subsys/mbedtls/repo/include
@@ -610,13 +610,13 @@ target_link_libraries(openthread-bee4
 add_custom_command(
     TARGET openthread-bee4
     POST_BUILD
-    COMMAND cp -f ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/librtk_sign.a ${PROJECT_SOURCE_DIR}/lib/bee4/
+    COMMAND cp -f ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/librtk_sign.a ${REALTEK_SDK_ROOT}/lib/bee4/
 )
 else()
 target_link_libraries(openthread-bee4
     PRIVATE
-        ${PROJECT_SOURCE_DIR}/lib/bee4/librtk_sign.a
-        ${PROJECT_SOURCE_DIR}/lib/bee4/libmbedcrypto.a
+        ${REALTEK_SDK_ROOT}/lib/bee4/librtk_sign.a
+        ${REALTEK_SDK_ROOT}/lib/bee4/libmbedcrypto.a
 )
 endif()
 
@@ -624,42 +624,42 @@ target_include_directories(openthread-bee4
     PRIVATE
         ${REALTEK_SDK_ROOT}/subsys/cfu
         ${REALTEK_SDK_ROOT}/subsys/dfu
-        ${PROJECT_SOURCE_DIR}/vendor/bee4/internal/cfu
-        ${PROJECT_SOURCE_DIR}/vendor/bee4/internal/config_param
+        ${PROJECT_SOURCE_DIR}/src/bee4/internal/cfu
+        ${PROJECT_SOURCE_DIR}/src/bee4/internal/config_param
 )
 
 target_sources(openthread-bee4
     PRIVATE
     ${REALTEK_SDK_ROOT}/subsys/cfu/cfu.c
-    ${PROJECT_SOURCE_DIR}/vendor/bee4/internal/cfu/cfu_application.c
-    ${PROJECT_SOURCE_DIR}/vendor/bee4/internal/cfu/cfu_task.c
-    ${PROJECT_SOURCE_DIR}/vendor/bee4/internal/cfu/cfu_callback.c
+    ${PROJECT_SOURCE_DIR}/src/bee4/internal/cfu/cfu_application.c
+    ${PROJECT_SOURCE_DIR}/src/bee4/internal/cfu/cfu_task.c
+    ${PROJECT_SOURCE_DIR}/src/bee4/internal/cfu/cfu_callback.c
     "${REALTEK_SDK_ROOT}/subsys/dfu/dfu_common.c"
-    ${PROJECT_SOURCE_DIR}/vendor/bee4/internal/config_param/config_param_handle.c
+    ${PROJECT_SOURCE_DIR}/src/bee4/internal/config_param/config_param_handle.c
 )
 
 if(${BUILD_BOARD_TARGET} STREQUAL "rtl8771guv" OR ${BUILD_BOARD_TARGET} STREQUAL "rtl8777g")
 target_sources(openthread-bee4
     PRIVATE
-    ${PROJECT_SOURCE_DIR}/vendor/bee4/internal/cfu/usb_cfu_handle.c
+    ${PROJECT_SOURCE_DIR}/src/bee4/internal/cfu/usb_cfu_handle.c
 )
 elseif(${BUILD_BOARD_TARGET} STREQUAL "rtl8771gtv")
 target_sources(openthread-bee4
     PRIVATE
-    ${PROJECT_SOURCE_DIR}/vendor/bee4/internal/cfu/uart_cfu_handle.c
-    ${PROJECT_SOURCE_DIR}/vendor/bee4/internal/cfu/loop_queue.c
-    ${PROJECT_SOURCE_DIR}/vendor/bee4/internal/cfu/uart_transport.c
+    ${PROJECT_SOURCE_DIR}/src/bee4/internal/cfu/uart_cfu_handle.c
+    ${PROJECT_SOURCE_DIR}/src/bee4/internal/cfu/loop_queue.c
+    ${PROJECT_SOURCE_DIR}/src/bee4/internal/cfu/uart_transport.c
 )
 endif()
 
 target_sources(ot-rcp
     PRIVATE
-    ${REALTEK_SDK_ROOT}/../../../vendor/bee4/main_ns.c
+    ${REALTEK_SDK_ROOT}/../../../src/bee4/main_ns.c
 )
 
 target_include_directories(ot-rcp
     PRIVATE
-        ${REALTEK_SDK_ROOT}/../../../vendor/bee4/${BUILD_TARGET}
+        ${REALTEK_SDK_ROOT}/../../../src/bee4/${BUILD_TARGET}
 )
 
 target_compile_definitions(ot-rcp

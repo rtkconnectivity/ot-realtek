@@ -186,7 +186,7 @@ post_build()
 {
     if is_create_ld_gen >/dev/null 2>&1; then
         ${OT_SRCDIR}/Realtek/post_build ${BUILD_BANK} ${OT_CMAKE_NINJA_TARGET}
-        rm -f ${OT_SRCDIR}/vendor/${platform}/${target}/*.gen
+        rm -f ${OT_SRCDIR}/src/${platform}/${target}/*.gen
     fi
 }
 
@@ -232,7 +232,7 @@ main()
     options+=("${OT_OPTIONS[@]}")
     options+=("-DRT_PLATFORM=${platform}")
     options+=("-DBUILD_TARGET=${target}")
-    options+=("-DOT_NCP_VENDOR_HOOK_SOURCE=${OT_SRCDIR}/vendor/${platform}/example_vendor_hook.cpp")
+    options+=("-DOT_NCP_VENDOR_HOOK_SOURCE=${OT_SRCDIR}/src/${platform}/example_vendor_hook.cpp")
     options+=("-DOT_CMAKE_NINJA_TARGET=${OT_CMAKE_NINJA_TARGET}")
     case "${platform}" in
         bee4)
@@ -249,7 +249,7 @@ main()
                         ;;
                 esac
                 build_matter
-                options+=("-DCMAKE_TOOLCHAIN_FILE=vendor/${platform}/arm-none-eabi.cmake")
+                options+=("-DCMAKE_TOOLCHAIN_FILE=src/${platform}/arm-none-eabi.cmake")
                 options+=("-DOPENTHREAD_ENABLE=ON")
                 case "${MATTER_UART_SELECT}" in
                      shell)

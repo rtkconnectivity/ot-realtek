@@ -15,14 +15,14 @@ chmod +x ${OT_SRCDIR}/tools/FlashMapGenerateCli
 chmod +x ${OT_SRCDIR}/tools/PackCli
 
 if [ $1 == "evb_dual" ] || [ $1 == "rtl8777g_dual" ]; then
-    cp -f ${OT_SRCDIR}/vendor/bee4/$1/*.ini ${OUT_FOLDER}/ota/
-    cp -f ${OT_SRCDIR}/vendor/bee4/$1/firmware/bank0/* ${OUT_FOLDER}/ota/
-    cp -f ${OT_SRCDIR}/vendor/bee4/$1/firmware/bank1/* ${OUT_FOLDER}/ota/
+    cp -f ${OT_SRCDIR}/src/bee4/$1/*.ini ${OUT_FOLDER}/ota/
+    cp -f ${OT_SRCDIR}/src/bee4/$1/firmware/bank0/* ${OUT_FOLDER}/ota/
+    cp -f ${OT_SRCDIR}/src/bee4/$1/firmware/bank1/* ${OUT_FOLDER}/ota/
     cp -f build/bin/*MP_dev*.bin ${OUT_FOLDER}/ota/
 
     ${OT_SRCDIR}/tools/FlashMapGenerateCli ${OUT_FOLDER}/ota $3 ${OUT_FOLDER}/ota
 else
-    cp -f ${OT_SRCDIR}/vendor/bee4/$1/*.ini ${OUT_FOLDER}/ota/
+    cp -f ${OT_SRCDIR}/src/bee4/$1/*.ini ${OUT_FOLDER}/ota/
     cp -f ${OUT_FOLDER}/bin/*MP_dev*.bin ${OUT_FOLDER}/ota/
 fi
 

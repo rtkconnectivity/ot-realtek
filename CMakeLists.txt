@@ -67,11 +67,11 @@ endif()
 
 target_include_directories(ot-config INTERFACE
     ${PROJECT_SOURCE_DIR}/openthread/examples/platforms
-    ${PROJECT_SOURCE_DIR}/vendor/${RT_PLATFORM}
+    ${PROJECT_SOURCE_DIR}/src/${RT_PLATFORM}
     ${REALTEK_SDK_INCPATH}
 )
 
-add_subdirectory(vendor/${RT_PLATFORM})
+add_subdirectory(src/${RT_PLATFORM})
 if(${OT_CMAKE_NINJA_TARGET} STREQUAL "matter-cli-ftd" OR ${OT_CMAKE_NINJA_TARGET} STREQUAL "matter-cli-mtd")
 set (bee_sdk_root "${REALTEK_SDK_ROOT}")
 set (bee_matter_root $ENV{BEE_MATTER})

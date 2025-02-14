@@ -2,7 +2,7 @@ BUILD_BANK=$1
 BUILD_TARGET=$2
 
 if [ "${BUILD_BANK}" = "bank0" ]; then
-   arm-none-eabi-gcc -D BUILD_BANK=0 -E -P -x c ${OT_SRCDIR}/vendor/bee4/${BUILD_TARGET}/app.ld -o ${OT_SRCDIR}/vendor/bee4/${BUILD_TARGET}/app.ld.gen
+   arm-none-eabi-gcc -D BUILD_BANK=0 -E -P -x c ${OT_SRCDIR}/src/bee4/${BUILD_TARGET}/app.ld -o ${OT_SRCDIR}/src/bee4/${BUILD_TARGET}/app.ld.gen
 elif [ "${BUILD_BANK}" = "bank1" ]; then
-   arm-none-eabi-gcc -D BUILD_BANK=1 -E -P -x c ${OT_SRCDIR}/vendor/bee4/${BUILD_TARGET}/app.ld -o ${OT_SRCDIR}/vendor/bee4/${BUILD_TARGET}/app.ld.gen
+   arm-none-eabi-gcc -D BUILD_BANK=1 -E -P -x c ${OT_SRCDIR}/src/bee4/${BUILD_TARGET}/app.ld -o ${OT_SRCDIR}/src/bee4/${BUILD_TARGET}/app.ld.gen
 fi

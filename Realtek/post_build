@@ -20,6 +20,6 @@ arm-none-eabi-objcopy -O binary -S ${OUT_FOLDER}/bin/${CMAKE_TARGET} ${TRACE_FIL
 chmod +x ${REALTEK_SDK_PATH}/tools/prepend_header/prepend_header
 chmod +x ${REALTEK_SDK_PATH}/tools/md5/MD5
 
-${REALTEK_SDK_PATH}/tools/prepend_header/prepend_header -t app_code -b 15 -p ${BIN_FILE} -m 1 -i ${OT_SRCDIR}/vendor/bee4/common/mp.ini -r ${REALTEK_SDK_PATH}/tools/keys/rtk_ecdsa.pem -a ${REALTEK_SDK_PATH}/tools/keys/key.json
+${REALTEK_SDK_PATH}/tools/prepend_header/prepend_header -t app_code -b 15 -p ${BIN_FILE} -m 1 -i ${OT_SRCDIR}/src/bee4/common/mp.ini -r ${REALTEK_SDK_PATH}/tools/keys/rtk_ecdsa.pem -a ${REALTEK_SDK_PATH}/tools/keys/key.json
 
 ${REALTEK_SDK_PATH}/tools/md5/MD5 ${MP_FILE}

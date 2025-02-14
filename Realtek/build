@@ -93,7 +93,7 @@ is_create_ld_gen()
     return 1
 }
 
-#modify folder to vendor/rtl8777g
+#modify folder to src/rtl8777g
 is_rtl8777g_signal_target() 
 {
     if [ ${board_target} == "rtl8777g" ] || [ ${board_target} == "rtl8777g_cert" ] \
@@ -187,7 +187,7 @@ post_build()
 {
     if is_create_ld_gen >/dev/null 2>&1; then
         ${OT_SRCDIR}/Realtek/post_build ${BUILD_BANK} ${OT_CMAKE_NINJA_TARGET}
-        rm -f ${OT_SRCDIR}/vendor/${platform}/${target}/*.gen
+        rm -f ${OT_SRCDIR}/src/${platform}/${target}/*.gen
     fi
 }
 
@@ -239,19 +239,19 @@ main()
     case "${platform}" in
         bb2ultra)
         options+=("${OT_OPTIONS[@]}")
-        options+=("-DOT_NCP_VENDOR_HOOK_SOURCE=$PWD/vendor/${platform}/example_vendor_hook.cpp")
+        options+=("-DOT_NCP_VENDOR_HOOK_SOURCE=$PWD/src/${platform}/example_vendor_hook.cpp")
         options+=("-DRT_PLATFORM=${platform}")
         options+=("-DBUILD_TARGET=${target}")
         case "${OT_CMAKE_NINJA_TARGET}" in
             ot-cli-ftd | ot-cli-mtd)
                 cd ${OT_SRCDIR}/openthread && git checkout thread-reference-20230706 && cd ${OT_SRCDIR}
-                options+=("-DCMAKE_TOOLCHAIN_FILE=vendor/${platform}/arm-none-eabi.cmake")
+                options+=("-DCMAKE_TOOLCHAIN_FILE=src/${platform}/arm-none-eabi.cmake")
                 options+=("-DENABLE_CLI=ON")
                 ;;
             ot-rcp)
-                dos2unix ${OT_SRCDIR}/vendor/bb2ultra/thread-reference-20230706_ot-rcp.patch
-                cd ${OT_SRCDIR}/openthread && git reset --hard HEAD && git checkout thread-reference-20230706 && git apply ../vendor/bb2ultra/thread-reference-20230706_ot-rcp.patch && cd ${OT_SRCDIR}
-                options+=("-DCMAKE_TOOLCHAIN_FILE=vendor/${platform}/arm-none-eabi.cmake")
+                dos2unix ${OT_SRCDIR}/src/bb2ultra/thread-reference-20230706_ot-rcp.patch
+                cd ${OT_SRCDIR}/openthread && git reset --hard HEAD && git checkout thread-reference-20230706 && git apply ../src/bb2ultra/thread-reference-20230706_ot-rcp.patch && cd ${OT_SRCDIR}
+                options+=("-DCMAKE_TOOLCHAIN_FILE=src/${platform}/arm-none-eabi.cmake")
                 options+=("-DENABLE_CLI=OFF -DOT_DNSSD_SERVER=ON -DOT_SRP_SERVER=ON")
                 ;;
             *)
@@ -268,7 +268,7 @@ main()
         ;;
         bee4)
         options+=("${OT_OPTIONS[@]}")
-        options+=("-DOT_NCP_VENDOR_HOOK_SOURCE=$PWD/vendor/${platform}/example_vendor_hook.cpp")
+        options+=("-DOT_NCP_VENDOR_HOOK_SOURCE=$PWD/src/${platform}/example_vendor_hook.cpp")
         options+=("-DRT_PLATFORM=${platform}")
         options+=("-DBUILD_BOARD_TARGET=${board_target}")
         options+=("-DBUILD_TARGET=${target}")
@@ -283,7 +283,7 @@ main()
                         ;;
                 esac
                 build_matter
-                options+=("-DCMAKE_TOOLCHAIN_FILE=vendor/${platform}/arm-none-eabi.cmake")
+                options+=("-DCMAKE_TOOLCHAIN_FILE=src/${platform}/arm-none-eabi.cmake")
                 options+=("-DOPENTHREAD_ENABLE=ON")
                 case "${MATTER_UART_SELECT}" in
                      shell)
@@ -309,17 +309,17 @@ main()
                         cd ${OT_SRCDIR}/openthread && git checkout thread-reference-20230706 && cd ${OT_SRCDIR}
                         ;;
                 esac
-                options+=("-DCMAKE_TOOLCHAIN_FILE=vendor/${platform}/arm-none-eabi.cmake")
+                options+=("-DCMAKE_TOOLCHAIN_FILE=src/${platform}/arm-none-eabi.cmake")
                 options+=("-DENABLE_CLI=ON")
                 ;;
             ot-ncp-ftd | ot-ncp-mtd)
                 cd ${OT_SRCDIR}/openthread && git checkout thread-reference-20230119 && cd ${OT_SRCDIR}
-                options+=("-DCMAKE_TOOLCHAIN_FILE=vendor/${platform}/ncp-arm-none-eabi.cmake")
+                options+=("-DCMAKE_TOOLCHAIN_FILE=src/${platform}/ncp-arm-none-eabi.cmake")
                 options+=("-DENABLE_CLI=OFF -DOT_DNSSD_SERVER=ON -DOT_SRP_SERVER=ON")
                 ;;
             ot-rcp)
                 cd ${OT_SRCDIR}/openthread && git checkout thread-reference-20230706 && cd ${OT_SRCDIR}
-                options+=("-DCMAKE_TOOLCHAIN_FILE=vendor/${platform}/arm-none-eabi.cmake")
+                options+=("-DCMAKE_TOOLCHAIN_FILE=src/${platform}/arm-none-eabi.cmake")
                 options+=("-DENABLE_CLI=OFF -DOT_DNSSD_SERVER=ON -DOT_SRP_SERVER=ON")
                 ;;
             *)
@@ -330,8 +330,8 @@ main()
                 rm -Rf ${OT_SRCDIR}/openthread/third_party/mbedtls/repo
                 cd ${OT_SRCDIR}/third_party/Realtek/rtl87x2g_sdk/subsys/mbedtls && tar -zcvf v3.0.0.tar.gz repo && cd ${OT_SRCDIR}
                 tar zxvf ${OT_SRCDIR}/third_party/Realtek/rtl87x2g_sdk/subsys/mbedtls/v3.0.0.tar.gz -C ${OT_SRCDIR}/openthread/third_party/mbedtls/
-                cp -f ${OT_SRCDIR}/vendor/bee4/common/common.h ${OT_SRCDIR}/openthread/third_party/mbedtls/repo/library/
-                cp -f ${OT_SRCDIR}/vendor/bee4/common/threading_alt.h ${OT_SRCDIR}/openthread/third_party/mbedtls/repo/include/
+                cp -f ${OT_SRCDIR}/src/bee4/common/common.h ${OT_SRCDIR}/openthread/third_party/mbedtls/repo/library/
+                cp -f ${OT_SRCDIR}/src/bee4/common/threading_alt.h ${OT_SRCDIR}/openthread/third_party/mbedtls/repo/include/
                 rm ${OT_SRCDIR}/third_party/Realtek/rtl87x2g_sdk/subsys/mbedtls/v3.0.0.tar.gz
                 ;;
             sdk)
@@ -346,7 +346,7 @@ main()
         else
             options+=("${OT_OPTIONS[@]}")
         fi
-        options+=("-DCMAKE_TOOLCHAIN_FILE=vendor/${platform}/arm-none-eabi.cmake")
+        options+=("-DCMAKE_TOOLCHAIN_FILE=src/${platform}/arm-none-eabi.cmake")
         options+=("-DRT_PLATFORM=${platform}")
         #options+=("-DBUILD_BOARD_TARGET=${board_target}")
         options+=("-DBUILD_TARGET=${target}")
@@ -358,7 +358,7 @@ main()
             ot-rcp)
                 case "${board_target}" in
                     rtl8771htv)
-                        options+=("-DOT_NCP_VENDOR_HOOK_SOURCE=$PWD/vendor/${platform}/example_vendor_hook.cpp")
+                        options+=("-DOT_NCP_VENDOR_HOOK_SOURCE=$PWD/src/${platform}/example_vendor_hook.cpp")
                         cd ${OT_SRCDIR}/openthread && git reset --hard HEAD && git checkout thread-reference-20230706 && git apply ../vendor/bee3plus/thread-reference-20230706.patch && cd ${OT_SRCDIR}
                         ;;
                     *)
