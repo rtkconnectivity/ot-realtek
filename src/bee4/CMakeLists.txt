@@ -285,7 +285,7 @@ target_sources(openthread-bee4
     ${REALTEK_SDK_ROOT}/subsys/matter/vendor/matter_ble/matter_ble_task.c
 )
 
-if($ENV{MATTER_ENABLE_OTA_REQUESTOR} EQUAL 1)
+if(matter_enable_ota_requestor)
 target_include_directories(openthread-bee4
     PRIVATE
         ${REALTEK_SDK_ROOT}/subsys/dfu
@@ -298,7 +298,7 @@ target_sources(openthread-bee4
 )
 endif()
 
-if($ENV{MATTER_ENABLE_BLE_OTA} EQUAL 1)
+if(matter_enable_ble_ota)
 target_compile_definitions(openthread-bee4 PUBLIC
     SUPPORT_BLE_OTA=1
     SUPPORT_NORMAL_OTA=0
@@ -319,13 +319,13 @@ target_sources(openthread-bee4
 )
 endif()
 
-if($ENV{MATTER_ENABLE_FACTORY_DATA} EQUAL 1)
+if(matter_enable_factory_data EQUAL 1)
     target_compile_definitions(openthread-bee4 PUBLIC "CONFIG_FACTORY_DATA_ENCRYPTION=0")
-elseif($ENV{MATTER_ENABLE_FACTORY_DATA} EQUAL 2)
+elseif(matter_enable_factory_data EQUAL 2)
     target_compile_definitions(openthread-bee4 PUBLIC "CONFIG_FACTORY_DATA_ENCRYPTION=1")
 endif()
 
-if($ENV{MATTER_DAC_KEY_ENCRYPTION} EQUAL 1)
+if(matter_dac_key_encryption EQUAL 1)
     target_compile_definitions(openthread-bee4 PUBLIC "CONFIG_DAC_KEY_ENC=1")
 endif()
 
@@ -390,7 +390,7 @@ target_compile_definitions(matter-cli-ftd
         "DLPS_EN=0"
 )
 
-if (($ENV{MATTER_ENABLE_PW_RPC}) EQUAL 1)
+if (matter_enable_rpc)
     target_link_libraries(matter-cli-ftd
         -Wl,--start-group
         chip_main
