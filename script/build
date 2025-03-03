@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-#  Copyright (c) 2020, The OpenThread Authors.
+#  Copyright (c) 2025, The OpenThread Authors.
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -186,7 +186,7 @@ main()
                 rm -Rf ${OT_SRCDIR}/openthread/third_party/mbedtls/repo
                 cd ${OT_SRCDIR}/third_party/rtl87x2g_sdk/subsys/mbedtls && tar -zcvf v3.0.0.tar.gz repo && cd ${OT_SRCDIR}
                 tar zxvf ${OT_SRCDIR}/third_party/Realtek/rtl87x2g_sdk/subsys/mbedtls/v3.0.0.tar.gz -C ${OT_SRCDIR}/openthread/third_party/mbedtls/
-                cp -f ${OT_SRCDIR}/src/bee4/common/common.h ${OT_SRCDIR}/openthread/third_party/mbedtls/repo/library/
+                cp -f ${OT_SRCDIR}/third_party/Realtek/bee4/common/common.h ${OT_SRCDIR}/openthread/third_party/mbedtls/repo/library/
                 cp -f ${OT_SRCDIR}/src/bee4/common/threading_alt.h ${OT_SRCDIR}/openthread/third_party/mbedtls/repo/include/
                 rm ${OT_SRCDIR}/third_party/Realtek/rtl87x2g_sdk/subsys/mbedtls/v3.0.0.tar.gz
                 ;;

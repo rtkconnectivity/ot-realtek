@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2020, The OpenThread Authors.
+#  Copyright (c) 2025, The OpenThread Authors.
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -238,6 +238,7 @@ target_include_directories(openthread-bee4
         ${REALTEK_SDK_ROOT}/subsys/mac_driver/portable/bee4
         ${CMAKE_CURRENT_SOURCE_DIR}/${BUILD_TARGET}
         ${CMAKE_CURRENT_SOURCE_DIR}/common
+        ${PROJECT_SOURCE_DIR}/third_party/Realtek/bee4/common
         ${REALTEK_SDK_ROOT}/subsys/usb/usb_hal/inc
         ${REALTEK_SDK_ROOT}/subsys/usb/usb_lib/inc/class
         ${REALTEK_SDK_ROOT}/subsys/usb/usb_lib/inc/composite
