@@ -29,13 +29,13 @@ To flash the images with [MPCli tool][MPCli], we should copy image file to MPCli
 
 ```bash
 $ cd <path-to-ot-realtek>
-$ cp ./build/bin/<ot-cli-ftd_MP_dev_0.0.0.0_XXXX.bin> ./tool/mpcli/bin
+$ cp ./build/bin/<ot-cli-ftd_MP_dev_0.0.0.0_XXXX.bin> ./third_party/Realtek/tool/mpcli/bin
 ```
 
 Then we should modify mptool config file.
 
 ```bash
-$ vim ./tool/mpcli/mptoolconfig.json
+$ vim ./third_party/Realtek/tool/mpcli/mptoolconfig.json
 ```
 
 Replace <ot-cli-ftd.bin> with image file name.
