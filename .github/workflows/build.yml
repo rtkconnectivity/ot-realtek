@@ -65,4 +65,4 @@ jobs:
     - name: Build
       run: |
         export PATH=/tmp/${{ matrix.gcc_extract_dir }}/bin:$PATH
-        OT_CMAKE_NINJA_TARGET="ot-cli-ftd" ./Realtek/build bee4 sdk rtl8777g
+        OT_CMAKE_NINJA_TARGET="ot-cli-ftd" ./script/build bee4 sdk rtl8777g

@@ -18,7 +18,7 @@ In a Bash terminal, follow these instructions to build the RTL8777G examples.
 
 ```bash
 $ cd <path-to-ot-realtek>
-$ OT_CMAKE_NINJA_TARGET="ot-cli-ftd" ./Realtek/build bee4 sdk rtl8777g
+$ OT_CMAKE_NINJA_TARGET="ot-cli-ftd" ./script/build bee4 sdk rtl8777g
 ```
 
 ## Flash Binaries

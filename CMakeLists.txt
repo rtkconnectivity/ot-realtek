@@ -127,7 +127,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
 
 add_subdirectory(openthread)
-include(Realtek/${BUILD_TYPE}.cmake)
+include(script/${BUILD_TYPE}.cmake)
 
 target_compile_definitions(ot-config INTERFACE
     OPENTHREAD_CONFIG_FILE="openthread-core-${RT_PLATFORM}-config.h"
