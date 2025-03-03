@@ -27,6 +27,8 @@ If the build completed successfully, the `bin` files may be found in `<path-to-r
 
 To flash the images with [MPCli tool][MPCli], we should copy image file to MPCli tool file.
 
+[MPCLi]: https://github.com/rtkconnectivity/ot-realtek/tree/main/third_party/Realtek/tool/mpcli
+
 ```bash
 $ cd <path-to-ot-realtek>
 $ cp ./build/bin/<ot-cli-ftd_MP_dev_0.0.0.0_XXXX.bin> ./third_party/Realtek/tool/mpcli/bin
