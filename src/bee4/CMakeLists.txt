@@ -112,7 +112,7 @@ add_library(openthread-bee4
     thread_task.c
     # crypto
     # app
-    dbg_printf.c
+    "${PROJECT_SOURCE_DIR}/third_party/Realtek/bee4/dbg_printf.c"
     # profile
     # peripheral
     "${REALTEK_SDK_ROOT}/bsp/driver/pinmux/src/rtl87x2g/rtl_pinmux.c"
@@ -242,6 +242,7 @@ target_include_directories(openthread-bee4
         ${REALTEK_SDK_ROOT}/subsys/usb/usb_hal/inc
         ${REALTEK_SDK_ROOT}/subsys/usb/usb_lib/inc/class
         ${REALTEK_SDK_ROOT}/subsys/usb/usb_lib/inc/composite
+        ${PROJECT_SOURCE_DIR}/third_party/Realtek/bee4/
 )
 
 if(${BUILD_TYPE} STREQUAL "dev")
