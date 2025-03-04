@@ -36,7 +36,7 @@ if(${BUILD_TARGET} STREQUAL "rtl8777g")
 set(RT_PLATFORM "bee4" CACHE STRING "")
 endif()
 
-set(bee_matter_root "$ENV{OT_SRCDIR}/../../..")
+set(bee_matter_root "${MATTER_EXAMPLE_PATH}/../../..")
 
 set(ENV{MATTER_ENABLE_MED} 0)
 set(matter_enable_factory_data 0)
@@ -153,7 +153,7 @@ target_include_directories(ot-config INTERFACE
 add_subdirectory(src/${RT_PLATFORM})
 if(${OT_CMAKE_NINJA_TARGET} STREQUAL "matter-cli-ftd" OR ${OT_CMAKE_NINJA_TARGET} STREQUAL "matter-cli-mtd")
 set (matter_output_path ${PROJECT_BINARY_DIR})
-set (matter_example_path $ENV{MATTER_EXAMPLE_PATH})
+set (matter_example_path ${MATTER_EXAMPLE_PATH})
 get_filename_component(SDK_ROOT ${REALTEK_SDK_ROOT} REALPATH)
 get_filename_component(CHIP_ROOT ${bee_matter_root} REALPATH)
 
