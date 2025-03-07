@@ -64,7 +64,7 @@ Contributors are required to abide by our [Code of Conduct](https://github.com/o
 
 # License
 
-OpenThread is released under the [BSD 3-Clause license](https://github.com/openthread/ot-realtek/blob/main/LICENSE). See the [`LICENSE`](https://github.com/openthread/ot-realtek/blob/main/LICENSE) file for more information.
+OpenThread is released under the [BSD 3-Clause license](https://github.com/openthread/ot-realtek/blob/main/LICENSE). See the [`LICENSE`](https://github.com/rtkconnectivity/ot-realtek/blob/main/LICENSE) file for more information.
 
 Please only use the OpenThread name and marks when accurately referencing this software distribution. Do not use the marks in a way that suggests you are endorsed by or otherwise affiliated with Nest, Google, or The Thread Group.
 
