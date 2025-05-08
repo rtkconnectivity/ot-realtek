@@ -44,6 +44,7 @@ Replace <ot-cli-ftd.bin> with image file name.
 
 Program file with MPCli.
 ```bash
+$ cd ./third_party/Realtek/tool/mpcli
 $ sudo mpcli -f mptoolconfig.json -c <serial port> -a -r
 ```
 Example: ```sudo mpcli -f mptoolconfig.json -c /dev/ttyUSB0 -a -r```
