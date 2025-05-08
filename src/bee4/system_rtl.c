@@ -41,12 +41,10 @@
 #include "mem_config.h"
 #include "os_sched.h"
 #include "os_pm.h"
-#include "os_timer.h"
 #include "trace.h"
 #include "utils.h"
 #include "flash_nor_device.h"
 #include "version.h"
-#include "flash_map.h"
 #include "aon_reg.h"
 #include "wdt.h"
 #include "rtl_gpio.h"
@@ -454,12 +452,8 @@ void ram_init(void)
     section_load_base = (unsigned int *)& __data_sram_section_ro_load_ad__;
     section_image_length = (unsigned int)& __data_sram_section_ro_length__;
 #endif
-
-    for (i = 0; i < section_image_length / sizeof(unsigned int); i ++)
-    {
-        //cppcheck-suppress objectIndex
-        section_image_base[i] = section_load_base[i];
-    }
+    // cppcheck-suppress nullPointer; objectIndex
+    memcpy(section_image_base, section_load_base, section_image_length);
 #if (BOOT_DIRECT_DEBUG == 1)
     DBG_DIRECT("APP copy DATA SRAM RO: src 0x%x, dest 0x%x, len %d",
                (uint32_t)section_load_base, (uint32_t)section_image_base, section_image_length);
@@ -491,7 +485,7 @@ void ram_init(void)
                (uint32_t)section_load_base, (uint32_t)section_image_base, section_image_length);
 #endif
 
-    //clear DATA SRAM zi
+    //clear data sram zi
 #if defined (__ARMCC_VERSION)
     extern unsigned int Image$$DATA_SRAM_SECTION$$ZI$$Base;
     extern unsigned int Image$$DATA_SRAM_SECTION$$ZI$$Length;
@@ -506,7 +500,7 @@ void ram_init(void)
     section_image_length = (unsigned int)& __data_sram_section_zi_length__;
 #endif
     // cppcheck-suppress nullPointer; objectIndex
-    memcpy(section_image_base, section_load_base, section_image_length);
+    memset(section_image_base, 0, section_image_length);
 #if (BOOT_DIRECT_DEBUG == 1)
     DBG_DIRECT("APP clear DATA SRAM zi: addr 0x%x, len %d", (uint32_t)section_image_base,
                section_image_length);
@@ -529,11 +523,8 @@ void ram_init(void)
     section_load_base = (unsigned int *)& __psram_section_ro_load_ad__;
     section_image_length = (unsigned int)& __psram_section_ro_length__;
 #endif
-    for (i = 0; i < section_image_length / sizeof(unsigned int); i ++)
-    {
-        //cppcheck-suppress objectIndex
-        section_image_base[i] = section_load_base[i];
-    }
+    // cppcheck-suppress nullPointer; objectIndex
+    memcpy(section_image_base, section_load_base, section_image_length);
     DBG_DIRECT("APP copy PSRAM RO: src 0x%x, dest 0x%x, len %d",
                (uint32_t)section_load_base, (uint32_t)section_image_base, section_image_length);
 
@@ -553,11 +544,8 @@ void ram_init(void)
     section_load_base = (unsigned int *)& __psram_section_rw_load_ad__;
     section_image_length = (unsigned int)& __psram_section_rw_length__;
 #endif
-    for (i = 0; i < section_image_length / sizeof(unsigned int); i ++)
-    {
-        //cppcheck-suppress objectIndex
-        section_image_base[i] = section_load_base[i];
-    }
+    // cppcheck-suppress nullPointer; objectIndex
+    memcpy(section_image_base, section_load_base, section_image_length);
     DBG_DIRECT("APP copy PSRAM rw: src 0x%x, dest 0x%x, len %d",
                (uint32_t)section_load_base, (uint32_t)section_image_base, section_image_length);
 
@@ -573,11 +561,8 @@ void ram_init(void)
     section_image_base = (unsigned int *)& __psram_section_zi_start__;
     section_image_length = (unsigned int)& __psram_section_zi_length__;
 #endif
-    for (i = 0; i < section_image_length / sizeof(unsigned int); i ++)
-    {
-        //cppcheck-suppress objectIndex
-        section_image_base[i] = 0;
-    }
+    // cppcheck-suppress nullPointer; objectIndex
+    memset(section_image_base, 0, section_image_length);
     DBG_DIRECT("APP clear PSRAM zi: addr 0x%x, len %d", (uint32_t)section_image_base,
                section_image_length);
 #endif
@@ -653,10 +638,11 @@ static void AppUpdateVectorTable(void)
         "SPI_3Wire", "SPI0", "SPI1", "SPI_Slave", "TIM0", "TIM1", "TIM2", "TIM3", "TIM4", "TIM5", "TIM6", "TIM7",
         "E_TIM0", "E_TIM1", "E_TIM2", "E_TIM3", "ADC_24bit", "SAR_ADC", "Keyscan", "AON_QDEC", "IR",
         "SDHC0", "ISO7816", "Display", "SPORT0 RX", "SPORT0 TX", "SPORT1 RX", "SPORT1 TX", "SHA256",
-        "Pub Key Engine", "Flash SEC", "SegCom_CTL", "CAN", "ETH", "IMDC", "Slave_Port_Monitor", "PTA_Mailbox",
+        "Pub Key Engine", "Flash SEC", "SegCom_CTL", "CAN", "ETH", "IDU", "Slave_Port_Monitor", "PTA_Mailbox",
         "USB", "USB_Suspend_N", "USB_Endp_Multi_Proc", "USB_IN_EP_0", "USB_IN_EP_1", "USB_IN_EP_2", "USB_IN_EP_3",
         "USB_IN_EP_4", "USB_IN_EP_5", "USB_OUT_EP_0", "USB_OUT_EP_1", "USB_OUT_EP_2", "USB_OUT_EP_3", "USB_OUT_EP_4",
-        "USB_OUT_EP_5", "USB_Sof", "Timer_A0_A1", "BT_Bluewiz", "BTMAC rsvd0", "Proprietary_protocol", "BTMAC rsvd1",
+        "USB_OUT_EP_5", "USB_Sof", "TMETER", "PF_RTC", "BTMAC_WRAP_AROUND", 
+        "Timer_A0_A1", "BT_Bluewiz", "BTMAC rsvd0", "BT_BZ_DMA", "Proprietary_protocol", "BTMAC rsvd1",
         "SPIC0", "SPIC1", "SPIC2", "TRNG", "LPCOMP", "SPI PHY1",  "Peri rsvd",
         "GPIOA2",  "GPIOA3",  "GPIOA4",  "GPIOA5",  "GPIOA6",  "GPIOA7",
         "GPIOA8",  "GPIOA9",  "GPIOA10", "GPIOA11", "GPIOA12", "GPIOA13", "GPIOA14", "GPIOA15",
@@ -700,10 +686,8 @@ static void AppUpdateVectorTable(void)
         RamVectorTableInit(S_RAM_VECTOR_ADDR);
     }
 #endif
-
-
     /* Update APP defined handlers */
-    for (i = 0; i < AppVectorSize / 4; ++i)
+    for (i = 0; i < AppVectorSize / 4;  ++i)
     {
         if (i == 0 || i == 1) //skip __initial_sp and reset_handler remap
         {
@@ -736,12 +720,10 @@ static void AppUpdateVectorTable(void)
                                  TRACE_STRING(ExtIrq[i - System_VECTORn]));
             }
 #endif
-
             RamVectorTableUpdate_ext((VECTORn_Type)i, (IRQ_Fun)pAppVector[i]);
         }
 
     }
-
     __DMB();
     __DSB();
 }

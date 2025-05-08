@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, The OpenThread Authors.
+ *  Copyright (c) 2025, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -130,7 +130,7 @@ example:
 
 
 #define NS_RAM_UPPERSTACK_SIZE          (3*1024)
-#define NS_RAM_APP_SIZE                 (147*1024)
+#define NS_RAM_APP_SIZE                 (151*1024)
 
 /* --------------------The following macros should not be modified!------------------------- */
 #define TCM_START_ADDR                  ITCM1_ADDR

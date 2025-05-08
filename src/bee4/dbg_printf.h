@@ -26,75 +26,23 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <openthread/platform/misc.h>
+#ifndef __DBG_PRINTF_H__
+#define __DBG_PRINTF_H__
 
-#include "platform-bee.h"
+#include <stdarg.h>
+#include <stddef.h>
+#include <stdint.h>
 
-extern int gPlatformPseudoResetLevel;
-extern int gPlatformPseudoResetLevel_zb;
-extern uint8_t mpan_GetCurrentPANIdx(void);
+//#include "rtl876x.h"
+#include "rtl_nvic.h"
+#include "rtl_uart.h"
+#include "rtl_gdma.h"
+#include "rtl_rcc.h"
 
-void __wrap_otInstanceResetRadioStack(otInstance *aInstance)
-{
-#ifdef BUILD_USB
-    uint8_t pan_idx = mpan_GetCurrentPANIdx();
-    OT_UNUSED_VARIABLE(aInstance);
-    if (pan_idx == 0)
-    {
-        gPlatformPseudoResetLevel++;
-    }
-    else
-    {
-        gPlatformPseudoResetLevel_zb++;
-    }
-    otTaskletsSignalPending(NULL);
-#else
-    OT_UNUSED_VARIABLE(aInstance);
-    WDG_SystemReset(RESET_ALL, SW_RESET_APP_END);
-#endif
-}
+void dbg_init(void);
+int dbg_snprintf(char *buffer, size_t count, const char *format, ...);
+int dbg_vprintf(const char *module, const char *fmt, va_list args);
+int dbg_printf(const char *fmt, ...);
+int dbg_sprintf(char *buffer, const char *format, ...);
 
-void otPlatReset(otInstance *aInstance)
-{
-    OT_UNUSED_VARIABLE(aInstance);
-    WDG_SystemReset(RESET_ALL, SW_RESET_APP_END);
-}
-
-otPlatResetReason otPlatGetResetReason(otInstance *aInstance)
-{
-    uint32_t rst_rsn;
-    otPlatResetReason reason;
-    OT_UNUSED_VARIABLE(aInstance);
-    // TODO: Write me!
-    rst_rsn = SW_RESET_APP_END;
-
-    switch (rst_rsn)
-    {
-    case RESET_REASON_HW:
-        reason = OT_PLAT_RESET_REASON_POWER_ON;
-        break;
-#ifdef RT_PLATFORM_BEE4
-    case RESET_REASON_WDT_TIMEOUT:
-#else
-    case RESET_REASON_WDG_TIMEOUT:
-#endif
-        reason = OT_PLAT_RESET_REASON_WATCHDOG;
-        break;
-
-    case SW_RESET_APP_END:
-        reason = OT_PLAT_RESET_REASON_SOFTWARE;
-        break;
-
-    default:
-        reason = OT_PLAT_RESET_REASON_UNKNOWN;
-        break;
-    }
-
-    return reason;
-}
-
-void otPlatWakeHost(void)
-{
-    // TODO: implement an operation to wake the host from sleep state.
-}
-
+#endif /* __DBG_PRINTF_H__ */

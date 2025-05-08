@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2019, The OpenThread Authors.
+ *  Copyright (c) 2025, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -38,6 +38,7 @@
 #include <openthread-core-config.h>
 #include <openthread/config.h>
 #include <openthread/tasklet.h>
+#include <openthread/message.h>
 
 #include <assert.h>
 #include <stdbool.h>
@@ -83,6 +84,8 @@
 #define RSSI_SETTLE_TIME_US   40           ///< RSSI settle time in microseconds.
 #define SAFE_DELTA            1000         ///< A safe value for the `dt` parameter of delayed operations.
 
+#define CSL_UNCERT            20           ///< The Uncertainty of the scheduling CSL of transmission by the parent, in ±10 us units.
+
 #if defined(__ICCARM__)
 _Pragma("diag_suppress=Pe167")
 #endif
@@ -100,20 +103,19 @@ enum
 #define MAC_FRAME_RX_TAIL_LEN    (7)     // extra length of frame trailer: LQI + RSSI
 #define MAC_FRAME_IMMACK_LEN     (3)
 
-#define RX_BUF_SIZE     16
-#define EV_BUF_SIZE     16
-
-#define NONE 0
+#define TX_NONE 0
 #define TX_WAIT_ACK 1
-#define TX_NOT_GNT 2
+#define TX_TERMED 2
 #define TX_OK 3
 #define TX_CCA_FAIL 4
 #define TX_NO_ACK 5
-#define ED_SCAN 6
-#define ENTER_SLEEP 7
+#define TX_PTA_FAIL 6
+#define TX_AT_FAIL 7
 
+#define DEFAULT_CCA_ED_THRES 20
+#define DEFAULT_CCA_CS_THRES 25
 #define MAX_TRANSMIT_RETRY 16
-#define MAX_TRANSMIT_AT_RETRY 4
+#define MAX_TRANSMIT_CCAFAIL 13
 #ifdef BUILD_MATTER
 #define MAX_TRANSMIT_BC_RETRY 1 // 1 times retry for broadcast frame
 #else
@@ -128,80 +130,67 @@ typedef struct
 
 typedef struct
 {
-void *sleep_done;
-void *edscan_done;
-bool sDisabled;
-otRadioState sState;
-uint8_t curr_channel;
-uint8_t saved_channel;
-uint16_t sPanid;
-int8_t sPower;
+    bool sDuringWakeup;
+    bool sPendingMicroAlarm;
+    bool sPendingMilliAlarm;
+    bool sDisabled;
+    otRadioState sState;
+    uint8_t curr_channel;
+    uint8_t saved_channel;
+    uint16_t sPanid;
+    int8_t sPower;
 
-uint16_t rx_tail;
-uint16_t rx_head;
-rx_item_t *rx_queue;
-rx_item_t ack_item;
+    uint16_t rx_tail;
+    uint16_t rx_head;
+    rx_item_t rx_queue[RX_BUF_SIZE];
+    rx_item_t ack_item;
+    rx_item_t ack_received;
+    bool ack_fp;
+    bool ack_receive_done;
 
-uint16_t ev_tail;
-uint16_t ev_head;
-uint8_t ev_queue[EV_BUF_SIZE];
+    uint32_t tx_backoff_delay;
+    uint8_t tx_result;
+    void *edscan_done;
 
-uint32_t     sTransmitRetry;
-uint32_t     sTransmitAtRetry;
-uint32_t     sTransmitBcRetry;
-
-uint32_t     sTransmitCcaFailCnt;
-otRadioFrame sTransmitFrame;
-uint8_t      sTransmitPsdu[MAC_FRAME_TX_HDR_LEN + IEEE802154_MAX_LENGTH];
+    uint32_t     sTransmitRetry;
+    uint32_t     sTransmitCcaFailCnt;
+    otRadioFrame sTransmitFrame;
+    uint8_t      sTransmitPsdu[MAC_FRAME_TX_HDR_LEN + IEEE802154_MAX_LENGTH];
 
 #if OPENTHREAD_CONFIG_MAC_HEADER_IE_SUPPORT
-otExtAddress  sExtAddress;
-otRadioIeInfo sTransmitIeInfo;
+    otRadioIeInfo sTransmitIeInfo;
 #endif
-
-// tx ack frame
-bool sAckedWithFramePending;
 
 // tx enhack frame
-uint8_t sEnhAckPsdu[MAC_FRAME_TX_HDR_LEN + IEEE802154_MAX_LENGTH];
-uint8_t enhack_frm_len;
-bool    enhack_frm_sec_en;
+    uint8_t sEnhAckPsdu[MAC_FRAME_TX_HDR_LEN + IEEE802154_MAX_LENGTH];
+    uint8_t enhack_frm_len;
+    bool    enhack_frm_sec_en;
 
-int8_t   sLnaGain;
-uint16_t sRegionCode;
+    int8_t   sLnaGain;
+    uint16_t sRegionCode;
 
-bool sPendingSleep;
 #if OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
-uint32_t      sCslPeriod;
-uint32_t      sCslSampleTime;
-uint8_t       sCslIeIndex;
+    uint32_t      sCslPeriod;
+    uint32_t      sCslSampleTime;
+    uint8_t       sCslIeIndex;
 #endif // OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
 #if OPENTHREAD_CONFIG_MLE_LINK_METRICS_SUBJECT_ENABLE
-uint8_t       enhAckProbingDataLen;
-uint8_t       sVendorIeIndex;
+    uint8_t       enhAckProbingDataLen;
+    uint8_t       sVendorIeIndex;
 #endif
 
-uint32_t sEnergyDetectionTime;
-uint8_t sEnergyDetectionChannel;
+    uint32_t sEnergyDetectionTime;
+    uint8_t sEnergyDetectionChannel;
 
 #if OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2
-uint32_t        sMacFrameCounter;
-uint8_t         sKeyId;
-otMacKeyMaterial sPrevKey;
-otMacKeyMaterial sCurrKey;
-otMacKeyMaterial sNextKey;
-bool            sAckedWithSecEnhAck;
-uint32_t        sAckFrameCounter;
-uint8_t         sAckKeyId;
+    uint32_t        sMacFrameCounter;
+    uint8_t         sKeyId;
+    otMacKeyMaterial sPrevKey;
+    otMacKeyMaterial sCurrKey;
+    otMacKeyMaterial sNextKey;
 #endif
 } radio_inst_t;
 static radio_inst_t radio_inst[MAX_PAN_NUM];
-
-void BEE_EventSend(uint8_t event, uint32_t pan_idx)
-{
-    radio_inst[pan_idx].ev_queue[radio_inst[pan_idx].ev_tail] = event;
-    radio_inst[pan_idx].ev_tail = (radio_inst[pan_idx].ev_tail + 1) % EV_BUF_SIZE;
-}
 
 typedef struct
 {
@@ -234,10 +223,8 @@ static uint8_t sha256_output[32];
 
 static void dataInit(uint8_t pan_idx)
 {
-    os_sem_create(&radio_inst[pan_idx].sleep_done, "sleep", 0, 1);
     os_sem_create(&radio_inst[pan_idx].edscan_done, "edscan", 0, 1);
     radio_inst[pan_idx].sDisabled = true;
-    radio_inst[pan_idx].rx_queue = malloc(sizeof(rx_item_t) * RX_BUF_SIZE);
 
     radio_inst[pan_idx].sTransmitFrame.mPsdu = &radio_inst[pan_idx].sTransmitPsdu[MAC_FRAME_TX_HDR_LEN];
 #if OPENTHREAD_CONFIG_MAC_HEADER_IE_SUPPORT
@@ -251,7 +238,7 @@ static void dataInit(uint8_t pan_idx)
 }
 
 #if OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2
-static void txAckProcessSecurity(uint8_t *aAckFrame, uint8_t pan_idx)
+APP_RAM_TEXT_SECTION void txAckProcessSecurity(uint8_t *aAckFrame, uint8_t pan_idx)
 {
     //otRadioFrame     ackFrame;
     otMacKeyMaterial *key = NULL;
@@ -264,7 +251,8 @@ static void txAckProcessSecurity(uint8_t *aAckFrame, uint8_t pan_idx)
         uint64_t src_ext_addr;
     } __attribute__((packed)) nonce;
 
-    radio_inst[pan_idx].sAckedWithSecEnhAck = false;
+    radio_inst[pan_idx].rx_queue[radio_inst[pan_idx].rx_tail].sReceivedFrames.mInfo.mRxInfo.mAckedWithSecEnhAck
+        = false;
     //otEXPECT(aAckFrame[SECURITY_ENABLED_OFFSET] & SECURITY_ENABLED_BIT);
     otEXPECT(mac_GetRxFrmSecEn());
 
@@ -295,9 +283,12 @@ static void txAckProcessSecurity(uint8_t *aAckFrame, uint8_t pan_idx)
         otEXPECT(false);
     }
 
-    radio_inst[pan_idx].sAckFrameCounter    = radio_inst[pan_idx].sMacFrameCounter;
-    radio_inst[pan_idx].sAckKeyId           = keyId;
-    radio_inst[pan_idx].sAckedWithSecEnhAck = true;
+    radio_inst[pan_idx].rx_queue[radio_inst[pan_idx].rx_tail].sReceivedFrames.mInfo.mRxInfo.mAckFrameCounter
+        = radio_inst[pan_idx].sMacFrameCounter;
+    radio_inst[pan_idx].rx_queue[radio_inst[pan_idx].rx_tail].sReceivedFrames.mInfo.mRxInfo.mAckKeyId
+        = keyId;
+    radio_inst[pan_idx].rx_queue[radio_inst[pan_idx].rx_tail].sReceivedFrames.mInfo.mRxInfo.mAckedWithSecEnhAck
+        = true;
 
     //ackFrame.mInfo.mTxInfo.mAesKey = key;
 
@@ -306,7 +297,7 @@ static void txAckProcessSecurity(uint8_t *aAckFrame, uint8_t pan_idx)
 
     //otMacFrameProcessTransmitAesCcm(&ackFrame, &sExtAddress);
     nonce.sec_level = mac_GetRxFrmSecLevel();
-    nonce.frame_counter = radio_inst[pan_idx].sMacFrameCounter;
+    nonce.frame_counter = radio_inst[pan_idx].sMacFrameCounter++;
     mac_memcpy(&nonce.src_ext_addr, mpan_GetLongAddress(pan_idx), sizeof(nonce.src_ext_addr));
 
     // set nonce
@@ -348,12 +339,6 @@ void otPlatRadioSetExtendedAddress(otInstance *aInstance, const otExtAddress *aE
     otLogInfoPlat("ExtAddr=%X%X%X%X%X%X%X%X", aExtAddress->m8[7], aExtAddress->m8[6],
                   aExtAddress->m8[5], aExtAddress->m8[4],
                   aExtAddress->m8[3], aExtAddress->m8[2], aExtAddress->m8[1], aExtAddress->m8[0]);
-#if OPENTHREAD_CONFIG_MAC_HEADER_IE_SUPPORT
-    for (size_t i = 0; i < sizeof(*aExtAddress); i++)
-    {
-        radio_inst[pan_idx].sExtAddress.m8[i] = aExtAddress->m8[sizeof(*aExtAddress) - 1 - i];
-    }
-#endif
     mpan_SetLongAddress((u8_t *)aExtAddress->m8, pan_idx);
 }
 
@@ -373,13 +358,14 @@ extern void (*modem_set_zb_cca_energy_detect_threshold)(int8_t thres, uint8_t re
 extern mac_attribute_t attr;
 extern mac_driver_t drv;
 
+void txnterr_handler(uint8_t pan_idx, uint32_t arg);
 void txn_handler(uint8_t pan_idx, uint32_t arg);
 void rxely_handler(uint8_t pan_idx, uint32_t arg);
 void rxdone_handler(uint8_t pan_idx, uint32_t arg);
 void edscan_handler(uint8_t pan_idx, uint32_t arg);
 void btcmp0_handler(uint8_t pan_idx, uint32_t arg);
 void btcmp1_handler(uint8_t pan_idx, uint32_t arg);
-#ifdef RT_PLATFORM_BB2ULTRA
+#if defined(RT_PLATFORM_BB2ULTRA) || defined(RT_PLATFORM_RTL8922D)
 void btcmp4_handler(uint8_t pan_idx, uint32_t arg);
 void btcmp5_handler(uint8_t pan_idx, uint32_t arg);
 #endif
@@ -391,16 +377,16 @@ void BEE_RadioInit(uint8_t pan_idx)
 
     if (pan_idx == 0)
     {
-        mpan_RegisterISR(0, txn_handler, rxely_handler, rxdone_handler, edscan_handler);
+        mpan_RegisterISR(0, txnterr_handler, txn_handler, rxely_handler, rxdone_handler, edscan_handler);
         mpan_RegisterTimer(0, MAC_BT_TIMER0, btcmp0_handler, 0);
         mpan_RegisterTimer(0, MAC_BT_TIMER1, btcmp1_handler, 0);
         mpan_EnableCtl(0, 1);
         dataInit(0);
     }
-#ifdef RT_PLATFORM_BB2ULTRA
+#if defined(RT_PLATFORM_BB2ULTRA) || defined(RT_PLATFORM_RTL8922D)
     else
     {
-        mpan_RegisterISR(1, txn_handler, rxely_handler, rxdone_handler, edscan_handler);
+        mpan_RegisterISR(1, txnterr_handler, txn_handler, rxely_handler, rxdone_handler, edscan_handler);
         mpan_RegisterTimer(1, MAC_BT_TIMER4, btcmp4_handler, 0);
         mpan_RegisterTimer(1, MAC_BT_TIMER5, btcmp5_handler, 0);
         mpan_EnableCtl(1, 1);
@@ -474,12 +460,48 @@ otError otPlatRadioSleep(otInstance *aInstance)
 
 void setChannel(uint8_t aChannel, uint8_t pan_idx)
 {
+    mac_RadioOn();
+#if defined(RT_PLATFORM_RTL8922D)
+    if (pan_idx == 0)
+    {
+        if (radio_inst[0].curr_channel != aChannel)
+        {
+            radio_inst[0].saved_channel = radio_inst[0].curr_channel;
+            radio_inst[0].curr_channel = aChannel;
+            mpan_SetChannel(aChannel, 0);
+        }
+
+        if (radio_inst[1].curr_channel == 0)
+        {
+            radio_inst[1].saved_channel = radio_inst[1].curr_channel;
+            radio_inst[1].curr_channel = aChannel;
+            mpan_SetChannel(aChannel, 1);
+        }
+    }
+    else
+    {
+        if (radio_inst[1].curr_channel != aChannel)
+        {
+            radio_inst[1].saved_channel = radio_inst[1].curr_channel;
+            radio_inst[1].curr_channel = aChannel;
+            mpan_SetChannel(aChannel, 1);
+        }
+
+        if (radio_inst[0].curr_channel == 0)
+        {
+            radio_inst[0].saved_channel = radio_inst[0].curr_channel;
+            radio_inst[0].curr_channel = aChannel;
+            mpan_SetChannel(aChannel, 0);
+        }
+    }
+#else
     if (radio_inst[pan_idx].curr_channel != aChannel)
     {
         radio_inst[pan_idx].saved_channel = radio_inst[pan_idx].curr_channel;
         radio_inst[pan_idx].curr_channel = aChannel;
-        mac_SetChannel(aChannel);
+        mpan_SetChannel(aChannel, pan_idx);
     }
+#endif
 }
 
 otError otPlatRadioReceive(otInstance *aInstance, uint8_t aChannel)
@@ -492,7 +514,9 @@ otError otPlatRadioReceive(otInstance *aInstance, uint8_t aChannel)
     {
         error  = OT_ERROR_NONE;
         radio_inst[pan_idx].sState = OT_RADIO_STATE_RECEIVE;
+        mpan_mac_lock(pan_idx);
         setChannel(aChannel, pan_idx);
+        mpan_mac_unlock();
         // TODO: radio enter RX ready
     }
     return error;
@@ -517,26 +541,22 @@ otError otPlatRadioTransmit(otInstance *aInstance, otRadioFrame *aFrame)
     otError error  = OT_ERROR_NONE;
     uint8_t ret;
     uint64_t now;
+    uint32_t curr_us;
+    uint32_t s;
     uint64_t target_us;
-    uint64_t diff;
 
     if (radio_inst[pan_idx].sState == OT_RADIO_STATE_DISABLED)
     {
         return OT_ERROR_INVALID_STATE;
     }
-
-    mpan_tx_lock(pan_idx);
-    radio_inst[pan_idx].sState = OT_RADIO_STATE_TRANSMIT;
-
-    if (aFrame->mInfo.mTxInfo.mTxDelay > 0)
+#if 0
+    if (!aFrame->mInfo.mTxInfo.mIsARetx)
     {
-        now = otPlatTimeGet();
-        target_us = mac_ConvertT0AndDtTo64BitTime(aFrame->mInfo.mTxInfo.mTxDelayBaseTime,
-                                                  aFrame->mInfo.mTxInfo.mTxDelay - 128,
-                                                  &now);
-        if (target_us > now) diff = target_us - now;
-        else diff = 0;
+        BEE_BufferInfo(aInstance);
     }
+#endif
+    mpan_mac_lock(pan_idx);
+    radio_inst[pan_idx].sState = OT_RADIO_STATE_TRANSMIT;
 
 #if OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2
     if (otMacFrameIsSecurityEnabled(aFrame) && otMacFrameIsKeyIdMode1(aFrame) &&
@@ -567,39 +587,54 @@ otError otPlatRadioTransmit(otInstance *aInstance, otRadioFrame *aFrame)
     setChannel(aFrame->mChannel, pan_idx);
     if (aFrame->mInfo.mTxInfo.mTxDelay > 0)
     {
-        radio_inst[pan_idx].sTransmitCcaFailCnt = 0;
-        radio_inst[pan_idx].sTransmitAtRetry = 0;
-        radio_inst[pan_idx].sTransmitBcRetry = 0;
-        if (diff)
+        s = os_lock();
+        curr_us = mac_GetCurrentBTUS();
+        now = bt_clk_offset + curr_us;
+        os_unlock(s);
+        target_us = mac_ConvertT0AndDtTo64BitTime(aFrame->mInfo.mTxInfo.mTxDelayBaseTime,
+                                                  aFrame->mInfo.mTxInfo.mTxDelay,
+                                                  &now);
+        if (target_us > now)
         {
-            now = otPlatTimeGet();
-            target_us = now + diff;
-            do
+            uint32_t diff = target_us - now;
+            mac_SetTxNCsmaDetail(false, 0);
+            ret = mpan_TrigTxNAtUS(otMacFrameIsAckRequested(aFrame), false, true, curr_us + diff, pan_idx);
+            while (MAC_STS_CHANNEL_BUSY == ret)
             {
-                now = otPlatTimeGet();
+                otLogNotePlat("TX_PTA_NOT_GNT %u %u", aFrame->mPsdu[2], aFrame->mLength - FCS_LEN);
+                ret = mpan_TrigTxNAtUS(otMacFrameIsAckRequested(aFrame), false, true, curr_us + diff, pan_idx);
             }
-            while (now < target_us);
-            mac_TrigTxN(otMacFrameIsAckRequested(aFrame), false);
         }
         else
         {
-            mac_TrigTxN(otMacFrameIsAckRequested(aFrame), false);
-            dbg_printf("TXAT %u expired %llu ", otMacFrameGetSequence(aFrame), now - target_us);
+            mac_SetTxNCsmaDetail(false, 0);
+            ret = mpan_TrigTxN(otMacFrameIsAckRequested(aFrame), false, pan_idx);
+            while (MAC_STS_CHANNEL_BUSY == ret)
+            {
+                otLogNotePlat("TX_PTA_NOT_GNT %u %u", aFrame->mPsdu[2], aFrame->mLength - FCS_LEN);
+                ret = mpan_TrigTxN(otMacFrameIsAckRequested(aFrame), false, pan_idx);
+            }
+            otLogNotePlat("TXAT %u %u expired %u", aFrame->mPsdu[2], aFrame->mLength - FCS_LEN,
+                          (uint32_t)(now - target_us));
         }
     }
     else
     {
         radio_inst[pan_idx].sTransmitCcaFailCnt = 0;
-        radio_inst[pan_idx].sTransmitRetry = 0;
-        radio_inst[pan_idx].sTransmitBcRetry = 0;
-        now = otPlatTimeGet();
-        target_us = now + mac_BackoffDelay();
-        do
+        if (radio_inst[pan_idx].sDuringWakeup)
         {
-            now = otPlatTimeGet();
+            mac_SetTxNCsmaDetail(false, 0);
         }
-        while (now < target_us);
-        mac_TrigTxN(otMacFrameIsAckRequested(aFrame), false);
+        else
+        {
+            mac_SetTxNCsmaDetail(true, 3+radio_inst[pan_idx].sTransmitCcaFailCnt);
+        }
+        ret = mpan_TrigTxN(otMacFrameIsAckRequested(aFrame), false, pan_idx);
+        while (MAC_STS_CHANNEL_BUSY == ret)
+        {
+            otLogNotePlat("TX_PTA_NOT_GNT %u %u", aFrame->mPsdu[2], aFrame->mLength - FCS_LEN);
+            ret = mpan_TrigTxN(otMacFrameIsAckRequested(aFrame), false, pan_idx);
+        }
     }
 
     otPlatRadioTxStarted(aInstance, aFrame);
@@ -620,16 +655,13 @@ int8_t otPlatRadioGetRssi(otInstance *aInstance)
     uint8_t rssi_raw;
     int8_t rssi;
 
-    mpan_tx_lock(pan_idx);
-    setChannel(radio_inst[pan_idx].curr_channel, pan_idx);
-
+    mpan_mac_lock(pan_idx);
+    while (!mac_GrantPHYStatus());
     mac_EDScan_begin(1);
     os_sem_take(radio_inst[pan_idx].edscan_done, 0xffffffff);
     mac_EDScan_end(&rssi_raw);
     rssi = mac_edscan_level2dbm(rssi_raw);
-
-    setChannel(radio_inst[pan_idx].saved_channel, pan_idx);
-    mpan_tx_unlock();
+    mpan_mac_unlock();
 
     return rssi;
 }
@@ -637,8 +669,11 @@ int8_t otPlatRadioGetRssi(otInstance *aInstance)
 otRadioCaps otPlatRadioGetCaps(otInstance *aInstance)
 {
     OT_UNUSED_VARIABLE(aInstance);
-    otRadioCaps caps = (OT_RADIO_CAPS_CSMA_BACKOFF | OT_RADIO_CAPS_ACK_TIMEOUT | OT_RADIO_CAPS_SLEEP_TO_TX |
+    otRadioCaps caps = (OT_RADIO_CAPS_CSMA_BACKOFF | OT_RADIO_CAPS_ACK_TIMEOUT |
+                        OT_RADIO_CAPS_SLEEP_TO_TX |
+#if 0
                         OT_RADIO_CAPS_TRANSMIT_RETRIES |
+#endif
 #if OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2
                         OT_RADIO_CAPS_TRANSMIT_SEC | OT_RADIO_CAPS_TRANSMIT_TIMING |
 #endif
@@ -674,7 +709,8 @@ otError otPlatRadioAddSrcMatchShortEntry(otInstance *aInstance, uint16_t aShortA
     uint8_t pan_idx = mpan_GetCurrentPANIdx();
     OT_UNUSED_VARIABLE(aInstance);
 
-    if (MAC_STS_HW_LIMIT == mpan_AddSrcShortAddrMatch(aShortAddress, radio_inst[pan_idx].sPanid, pan_idx))
+    if (MAC_STS_HW_LIMIT == mpan_AddSrcShortAddrMatch(aShortAddress, radio_inst[pan_idx].sPanid,
+                                                      pan_idx))
     {
         otLogInfoPlat("ShortEntry full!");
         return OT_ERROR_NO_BUFS;
@@ -710,7 +746,8 @@ otError otPlatRadioClearSrcMatchShortEntry(otInstance *aInstance, uint16_t aShor
     uint8_t pan_idx = mpan_GetCurrentPANIdx();
     OT_UNUSED_VARIABLE(aInstance);
 
-    if (MAC_STS_FAILURE == mpan_DelSrcShortAddrMatch(aShortAddress, radio_inst[pan_idx].sPanid, pan_idx))
+    if (MAC_STS_FAILURE == mpan_DelSrcShortAddrMatch(aShortAddress, radio_inst[pan_idx].sPanid,
+                                                     pan_idx))
     {
         otLogInfoPlat("%x not found!", aShortAddress);
         return OT_ERROR_NO_ADDRESS;
@@ -768,8 +805,6 @@ otError otPlatRadioEnergyScan(otInstance *aInstance, uint8_t aScanChannel, uint1
     radio_inst[pan_idx].sEnergyDetectionChannel = aScanChannel;
 
     BEE_EventSend(ED_SCAN, pan_idx);
-    otTaskletsSignalPending(NULL);
-
     return OT_ERROR_NONE;
 }
 
@@ -786,7 +821,7 @@ otError otPlatRadioGetTransmitPower(otInstance *aInstance, int8_t *aPower)
     }
     else
     {
-        *aPower = radio_inst[pan_idx].sPower;
+        *aPower = mac_GetTXPower_patch();
     }
 
     return error;
@@ -797,13 +832,8 @@ otError otPlatRadioSetTransmitPower(otInstance *aInstance, int8_t aPower)
     uint8_t pan_idx = mpan_GetCurrentPANIdx();
     OT_UNUSED_VARIABLE(aInstance);
     OT_UNUSED_VARIABLE(aPower);
-    int8_t actual_power;
-
-    otError error   = OT_ERROR_NONE;
-    radio_inst[pan_idx].sPower = aPower;
-    actual_power = mac_SetTXPower_patch(aPower);
-    otLogInfoPlat("tx_power %d actual_power %d", aPower, actual_power);
-    return error;
+    radio_inst[pan_idx].sPower = mac_SetTXPower_patch(aPower);
+    return OT_ERROR_NONE;
 }
 
 otError otPlatRadioGetCcaEnergyDetectThreshold(otInstance *aInstance, int8_t *aThreshold)
@@ -875,131 +905,300 @@ exit:
     return error;
 }
 
-void BEE_SleepDone(uint8_t pan_idx)
-{
-#if defined(DLPS_EN) && (DLPS_EN == 1)
-    if (radio_inst[pan_idx].sPendingSleep)
-    {
-        os_sem_give(radio_inst[pan_idx].sleep_done);
-    }
-#endif
-}
+extern volatile uint64_t micro_alarm_us[MAX_PAN_NUM];
+extern volatile bool micro_alarm_fired[MAX_PAN_NUM];
+
+extern volatile uint64_t milli_alarm_us[MAX_PAN_NUM];
+extern volatile bool milli_alarm_fired[MAX_PAN_NUM];
 
 #ifdef _IS_FPGA_
+void BEE_WakeupProcess(otInstance *aInstance, uint8_t pan_idx)
+{
+}
+
 void BEE_SleepProcess(otInstance *aInstance, uint8_t pan_idx)
 {
-    if (radio_inst[pan_idx].sPendingSleep)
-    {
-        radio_inst[pan_idx].sPendingSleep = false;
-    }
 }
 #else
+
+#define SSED_THRESHOLD_MIN_10SYM_US 400000
+#define SED_THRESHOLD_MIN_US 400000
+#define SED_THRESHOLD_MAX_US 30000000
+
 extern void (*zbmac_pm_init)(zbpm_adapter_t *padapter);
 
 static bool zbpm_inited = false;
 static zbpm_adapter_t zbpm_adap;
 
-static void zbpm_enter(void)
+static void zbpm_enter_pan0(void)
 {
-    //otLogInfoPlat("%s", __func__);
+    radio_inst[0].sDuringWakeup = false;
 }
 
-static void zbpm_exit(void)
+static void zbpm_enter_pan1(void)
 {
-    //otLogInfoPlat("%u %u", otPlatAlarmMicroGetNow(), zbpm_adap.wakeup_time_us);
+    radio_inst[1].sDuringWakeup = false;
 }
 
-extern volatile uint64_t micro_alarm_us[MAX_PAN_NUM];
-extern volatile uint64_t milli_alarm_us[MAX_PAN_NUM];
-
-void BEE_SleepProcess(otInstance *aInstance, uint8_t pan_idx)
+static void zbpm_exit_pan0(void)
 {
     zbpm_adapter_t *padapter = &zbpm_adap;
-#if defined(DLPS_EN) && (DLPS_EN == 1)
-    if (radio_inst[pan_idx].sCslPeriod > 0)
+    uint32_t curr_us = mac_GetCurrentBTUS();
+    mac_bt_clk_t bt_clk_overflow_value =
     {
-        if (micro_alarm_us[pan_idx] > otPlatTimeGet())
+        .bt_clk_counter = 0,        /*!< [9..0] BT clock counter in 1 us unit */
+        .bt_native_clk = 0x3FFFFF   /*!< [31..10] BT native clock[21:1] in unit of BT slot */
+    };
+    uint64_t now;
+    uint32_t diff;
+
+    radio_inst[0].sDuringWakeup = true;
+    if (curr_us < padapter->enter_time_us)
+    {
+        bt_clk_offset += MAX_BT_CLOCK_COUNTER;
+    }
+    mac_SetBTClkInt(MAC_BT_TIMER3, &bt_clk_overflow_value);
+
+    if (radio_inst[0].sCslPeriod > 0)
+    {
+        mac_RadioOn();
+        if (curr_us < padapter->scheduled_wakeup_time)
         {
-            radio_inst[pan_idx].sPendingSleep = true;
-            otLogNotePlat(">>ssed %u %u", otPlatAlarmMicroGetNow(), (uint32_t)micro_alarm_us[pan_idx]);
-            padapter->power_mode = ZBMAC_DEEP_SLEEP;
-            padapter->wakeup_reason = ZBMAC_PM_WAKEUP_UNKNOWN;
-            padapter->error_code = ZBMAC_PM_ERROR_UNKNOWN;
-
-            padapter->stage_time[ZBMAC_PM_CHECK] = 20;
-            padapter->stage_time[ZBMAC_PM_STORE] = 15;
-            padapter->stage_time[ZBMAC_PM_ENTER] = 5;
-            padapter->stage_time[ZBMAC_PM_EXIT] = 5;
-            padapter->stage_time[ZBMAC_PM_RESTORE] = 20;
-            padapter->minimum_sleep_time = 20;
-            padapter->learning_guard_time = 7; // 3 (learning guard time) + 4 (two 16k po_intr drift)
-
-            padapter->cfg.wake_interval_en = 0;
-            padapter->cfg.stage_time_learned = 0;
-            padapter->wakeup_time_us = micro_alarm_us[pan_idx];
-            padapter->wakeup_interval_us = 0;
-
-            //padapter->enter_callback = zbpm_enter;
-            //padapter->exit_callback = zbpm_exit;
-
-            if (!zbpm_inited)
-            {
-                zbpm_inited = true;
-                zbmac_pm_init(padapter);
-            }
-            os_sem_take(radio_inst[pan_idx].sleep_done, 0xffffffff);
-            radio_inst[pan_idx].sPendingSleep = false;
-            otLogNotePlat("<<%u", otPlatAlarmMicroGetNow());
+            mac_SetBTClkUSInt(MAC_BT_TIMER1, padapter->scheduled_wakeup_time);
         }
         else
         {
-            otLogNotePlat("ssed invalid alarm");
+            BEE_EventSend(ALARM_US, 0);
+            otTaskletsSignalPending(NULL);
+        }
+        if (milli_alarm_us[0] > 0)
+        {
+            radio_inst[0].sPendingMilliAlarm = true;
         }
     }
     else
     {
-        if (OT_DEVICE_ROLE_DISABLED == otThreadGetDeviceRole(aInstance) || OT_DEVICE_ROLE_DETACHED == otThreadGetDeviceRole(aInstance))
+        if (curr_us < padapter->scheduled_wakeup_time)
         {
-            otLogNotePlat("disabled || detached");
+            mac_SetBTClkUSInt(MAC_BT_TIMER0, padapter->scheduled_wakeup_time);
         }
         else
         {
-            if (milli_alarm_us[pan_idx] > otPlatTimeGet())
+            BEE_EventSend(ALARM_MS, 0);
+            otTaskletsSignalPending(NULL);
+        }
+        if (micro_alarm_us[0] > 0)
+        {
+            radio_inst[0].sPendingMicroAlarm = true;
+        }
+    }
+}
+
+static void zbpm_exit_pan1(void)
+{
+    zbpm_adapter_t *padapter = &zbpm_adap;
+    uint32_t curr_us = mac_GetCurrentBTUS();
+    mac_bt_clk_t bt_clk_overflow_value =
+    {
+        .bt_clk_counter = 0,        /*!< [9..0] BT clock counter in 1 us unit */
+        .bt_native_clk = 0x3FFFFF   /*!< [31..10] BT native clock[21:1] in unit of BT slot */
+    };
+    uint64_t now;
+    uint32_t diff;
+
+    radio_inst[1].sDuringWakeup = true;
+    if (curr_us < padapter->enter_time_us)
+    {
+        bt_clk_offset += MAX_BT_CLOCK_COUNTER;
+    }
+    mac_SetBTClkInt(MAC_BT_TIMER3, &bt_clk_overflow_value);
+
+    if (radio_inst[1].sCslPeriod > 0)
+    {
+        mac_RadioOn();
+        if (curr_us < padapter->scheduled_wakeup_time)
+        {
+            mac_SetBTClkUSInt(MAC_BT_TIMER5, padapter->scheduled_wakeup_time);
+        }
+        else
+        {
+            BEE_EventSend(ALARM_US, 1);
+            otTaskletsSignalPending(NULL);
+        }
+        if (milli_alarm_us[1] > 0)
+        {
+            radio_inst[1].sPendingMilliAlarm = true;
+        }
+    }
+    else
+    {
+        if (curr_us < padapter->scheduled_wakeup_time)
+        {
+            mac_SetBTClkUSInt(MAC_BT_TIMER4, padapter->scheduled_wakeup_time);
+        }
+        else
+        {
+            BEE_EventSend(ALARM_MS, 1);
+            otTaskletsSignalPending(NULL);
+        }
+        if (micro_alarm_us[1] > 0)
+        {
+            radio_inst[1].sPendingMicroAlarm = true;
+        }
+    }
+}
+
+void BEE_SleepProcess(otInstance *aInstance, uint8_t pan_idx)
+{
+#if defined(DLPS_EN) && (DLPS_EN == 1)
+    zbpm_adapter_t *padapter = &zbpm_adap;
+    uint64_t now;
+    uint32_t curr_us;
+    uint32_t s;
+    uint32_t diff;
+    otLinkModeConfig mode;
+
+    if (padapter->power_mode == ZBMAC_DEEP_SLEEP)
+    {
+        return;
+    }
+
+    mode = otThreadGetLinkMode(aInstance);
+    if (OT_DEVICE_ROLE_DISABLED == otThreadGetDeviceRole(aInstance) ||
+        OT_DEVICE_ROLE_DETACHED == otThreadGetDeviceRole(aInstance) || mode.mRxOnWhenIdle)
+    {
+        otLogInfoPlat("disabled || detached || mRxOnWhenIdle");
+    }
+    else
+    {
+        if (radio_inst[pan_idx].sCslPeriod > 0)
+        {
+            // SSED
+            if (micro_alarm_us[pan_idx] > 0)
             {
-                radio_inst[pan_idx].sPendingSleep = true;
-                otLogNotePlat(">>sed %u %u", otPlatAlarmMicroGetNow(), (uint32_t)milli_alarm_us[pan_idx]);
-                padapter->power_mode = ZBMAC_DEEP_SLEEP;
-                padapter->wakeup_reason = ZBMAC_PM_WAKEUP_UNKNOWN;
-                padapter->error_code = ZBMAC_PM_ERROR_UNKNOWN;
-
-                padapter->stage_time[ZBMAC_PM_CHECK] = 20;
-                padapter->stage_time[ZBMAC_PM_STORE] = 15;
-                padapter->stage_time[ZBMAC_PM_ENTER] = 5;
-                padapter->stage_time[ZBMAC_PM_EXIT] = 5;
-                padapter->stage_time[ZBMAC_PM_RESTORE] = 20;
-                padapter->minimum_sleep_time = 20;
-                padapter->learning_guard_time = 7; // 3 (learning guard time) + 4 (two 16k po_intr drift)
-
-                padapter->cfg.wake_interval_en = 0;
-                padapter->cfg.stage_time_learned = 0;
-                padapter->wakeup_time_us = milli_alarm_us[pan_idx];
-                padapter->wakeup_interval_us = 0;
-
-                //padapter->enter_callback = zbpm_enter;
-                //padapter->exit_callback = zbpm_exit;
-
-                if (!zbpm_inited)
+                s = os_lock();
+                curr_us = mac_GetCurrentBTUS();
+                now = bt_clk_offset + curr_us;
+                if (micro_alarm_us[pan_idx] > now)
                 {
-                    zbpm_inited = true;
-                    zbmac_pm_init(padapter);
+                    diff = micro_alarm_us[pan_idx] - now;
+                    if (diff < SSED_THRESHOLD_MIN_10SYM_US)
+                    {
+                        os_unlock(s);
+                        otLogNotePlat("ssed sleep diff %u invalid", diff);
+                    }
+                    else
+                    {
+                        if (milli_alarm_us[pan_idx] > now && micro_alarm_us[pan_idx] > milli_alarm_us[pan_idx])
+                        {
+                            os_unlock(s);
+                            otLogNotePlat("ssed sleep to %llu wait for %llu", micro_alarm_us[pan_idx], milli_alarm_us[pan_idx]);
+                        }
+                        else
+                        {
+                            padapter->power_mode = ZBMAC_DEEP_SLEEP;
+                            padapter->wakeup_reason = ZBMAC_PM_WAKEUP_UNKNOWN;
+                            padapter->error_code = ZBMAC_PM_ERROR_UNKNOWN;
+
+                            padapter->stage_time[ZBMAC_PM_CHECK] = 20;
+                            padapter->stage_time[ZBMAC_PM_STORE] = 15;
+                            padapter->stage_time[ZBMAC_PM_ENTER] = 5;
+                            padapter->stage_time[ZBMAC_PM_EXIT] = 5;
+                            padapter->stage_time[ZBMAC_PM_RESTORE] = 20;
+                            padapter->minimum_sleep_time = 20;
+                            padapter->learning_guard_time = 7; // 3 (learning guard time) + 4 (two 16k po_intr drift)
+
+                            padapter->cfg.wake_interval_en = 1;
+                            padapter->cfg.stage_time_learned = 0;
+                            padapter->wakeup_time_us = curr_us;
+                            padapter->wakeup_interval_us = diff;
+
+                            padapter->enter_callback = (pan_idx == 0) ? zbpm_enter_pan0 : zbpm_enter_pan1;
+                            padapter->exit_callback = (pan_idx == 0) ? zbpm_exit_pan0 : zbpm_exit_pan1;
+                            if (!zbpm_inited)
+                            {
+                                zbpm_inited = true;
+                                zbmac_pm_init(padapter);
+                            }
+                            os_unlock(s);
+                            otLogInfoPlat("ssed sleep to %llu", micro_alarm_us[pan_idx]);
+                        }
+                    }
                 }
-                os_sem_take(radio_inst[pan_idx].sleep_done, 0xffffffff);
-                radio_inst[pan_idx].sPendingSleep = false;
-                otLogNotePlat("<<%u", otPlatAlarmMicroGetNow());
+                else
+                {
+                    os_unlock(s);
+                    otLogInfoPlat("us alarm expired");
+                }
             }
             else
             {
-                otLogNotePlat("sed invalid alarm");
+                otLogInfoPlat("us alarm empty");
+            }
+        }
+        else
+        {
+            // SED
+            if (milli_alarm_us[pan_idx] > 0)
+            {
+                s = os_lock();
+                curr_us = mac_GetCurrentBTUS();
+                now = bt_clk_offset + curr_us;
+                if (milli_alarm_us[pan_idx] > now)
+                {
+                    diff = milli_alarm_us[pan_idx] - now;
+                    if (diff > SED_THRESHOLD_MAX_US)
+                    {
+                        os_unlock(s);
+                        otLogNotePlat("sed sleep diff %u invalid", diff);
+                    }
+                    else
+                    {
+                        if (micro_alarm_us[pan_idx] > now && milli_alarm_us[pan_idx] > micro_alarm_us[pan_idx])
+                        {
+                            os_unlock(s);
+                            otLogNotePlat("sed sleep to %llu wait for %llu", milli_alarm_us[pan_idx], micro_alarm_us[pan_idx]);
+                        }
+                        else
+                        {
+                            padapter->power_mode = ZBMAC_DEEP_SLEEP;
+                            padapter->wakeup_reason = ZBMAC_PM_WAKEUP_UNKNOWN;
+                            padapter->error_code = ZBMAC_PM_ERROR_UNKNOWN;
+
+                            padapter->stage_time[ZBMAC_PM_CHECK] = 20;
+                            padapter->stage_time[ZBMAC_PM_STORE] = 15;
+                            padapter->stage_time[ZBMAC_PM_ENTER] = 5;
+                            padapter->stage_time[ZBMAC_PM_EXIT] = 5;
+                            padapter->stage_time[ZBMAC_PM_RESTORE] = 20;
+                            padapter->minimum_sleep_time = 20;
+                            padapter->learning_guard_time = 7; // 3 (learning guard time) + 4 (two 16k po_intr drift)
+
+                            padapter->cfg.wake_interval_en = 1;
+                            padapter->cfg.stage_time_learned = 0;
+                            padapter->wakeup_time_us = curr_us;
+                            padapter->wakeup_interval_us = diff;
+
+                            padapter->enter_callback = (pan_idx == 0) ? zbpm_enter_pan0 : zbpm_enter_pan1;
+                            padapter->exit_callback = (pan_idx == 0) ? zbpm_exit_pan0 : zbpm_exit_pan1;
+                            if (!zbpm_inited)
+                            {
+                                zbpm_inited = true;
+                                zbmac_pm_init(padapter);
+                            }
+                            os_unlock(s);
+                            otLogInfoPlat("sed sleep to %llu", milli_alarm_us[pan_idx]);
+                        }
+                    }
+                }
+                else
+                {
+                    os_unlock(s);
+                    otLogInfoPlat("ms alarm expired");
+                }
+            }
+            else
+            {
+                otLogInfoPlat("ms alarm empty");
             }
         }
     }
@@ -1007,146 +1206,86 @@ void BEE_SleepProcess(otInstance *aInstance, uint8_t pan_idx)
 }
 #endif
 
-void BEE_EventProcess(otInstance *aInstance, uint8_t pan_idx)
+void BEE_AlarmMicroProcess(otInstance *aInstance, uint8_t pan_idx)
 {
-    uint8_t ed_value_raw;
-    int8_t ed_value;
-    rx_item_t *rx_item;
-    uint16_t curr_ev_tail;
-    uint8_t event;
     uint64_t now;
-    uint64_t target_us;
-
-    while (radio_inst[pan_idx].rx_head != radio_inst[pan_idx].rx_tail)
+    uint32_t curr_us;
+    uint32_t s;
+    uint32_t diff;
+#if defined(DLPS_EN) && (DLPS_EN == 1)
+    zbpm_adapter_t *padapter = &zbpm_adap;
+    if (padapter->power_mode == ZBMAC_DEEP_SLEEP)
     {
-        rx_item = &radio_inst[pan_idx].rx_queue[radio_inst[pan_idx].rx_head];
-        otPlatRadioReceiveDone(aInstance, &rx_item->sReceivedFrames, OT_ERROR_NONE);
-        radio_inst[pan_idx].rx_head = (radio_inst[pan_idx].rx_head + 1) % RX_BUF_SIZE;
+        otLogNotePlat("zbpm_enter expired");
+        padapter->power_mode = ZBMAC_ACTIVE;
     }
-
-    curr_ev_tail = radio_inst[pan_idx].ev_tail;
-    while (radio_inst[pan_idx].ev_head != curr_ev_tail)
+#endif
+    micro_alarm_us[pan_idx] = 0;
+    otPlatAlarmMicroFired(aInstance);
+    if (radio_inst[pan_idx].sPendingMilliAlarm)
     {
-        event = radio_inst[pan_idx].ev_queue[radio_inst[pan_idx].ev_head];
-        radio_inst[pan_idx].ev_head = (radio_inst[pan_idx].ev_head + 1) % EV_BUF_SIZE;
-
-        switch (event)
+        radio_inst[pan_idx].sPendingMilliAlarm = false;
+        s = os_lock();
+        curr_us = mac_GetCurrentBTUS();
+        now = bt_clk_offset + curr_us;
+        os_unlock(s);
+        if (milli_alarm_us[pan_idx] > now)
         {
-            case TX_WAIT_ACK:
+            diff = milli_alarm_us[pan_idx] - now;
+            if (pan_idx == 0)
             {
-                otPlatRadioTxDone(aInstance, &radio_inst[pan_idx].sTransmitFrame, &radio_inst[pan_idx].ack_item.sReceivedFrames, OT_ERROR_NONE);
-                mpan_tx_unlock();
+                mac_SetBTClkUSInt(MAC_BT_TIMER4, curr_us + diff);
             }
-            break;
-
-            case TX_OK:
+            else
             {
-                otPlatRadioTxDone(aInstance, &radio_inst[pan_idx].sTransmitFrame, NULL, OT_ERROR_NONE);
-                mpan_tx_unlock();
+                mac_SetBTClkUSInt(MAC_BT_TIMER0, curr_us + diff);
             }
-            break;
+        }
+        else
+        {
+            BEE_EventSend(ALARM_MS, pan_idx);
+        }
+    }
+}
 
-            case TX_NOT_GNT:
+void BEE_AlarmMilliProcess(otInstance *aInstance, uint8_t pan_idx)
+{
+    uint64_t now;
+    uint32_t curr_us;
+    uint32_t s;
+    uint32_t diff;
+#if defined(DLPS_EN) && (DLPS_EN == 1)
+    zbpm_adapter_t *padapter = &zbpm_adap;
+    if (padapter->power_mode == ZBMAC_DEEP_SLEEP)
+    {
+        otLogNotePlat("zbpm_enter expired");
+        padapter->power_mode = ZBMAC_ACTIVE;
+    }
+#endif
+    milli_alarm_us[pan_idx] = 0;
+    otPlatAlarmMilliFired(aInstance);
+    if (radio_inst[pan_idx].sPendingMicroAlarm)
+    {
+        radio_inst[pan_idx].sPendingMicroAlarm = false;
+        s = os_lock();
+        curr_us = mac_GetCurrentBTUS();
+        now = bt_clk_offset + curr_us;
+        os_unlock(s);
+        if (micro_alarm_us[pan_idx] > now)
+        {
+            diff = micro_alarm_us[pan_idx] - now;
+            if (pan_idx == 0)
             {
-                otLogNotePlat("TX_NOT_GNT %u %u cca_fail %u retry %u", otMacFrameGetSequence(&radio_inst[pan_idx].sTransmitFrame), radio_inst[pan_idx].sTransmitFrame.mLength - FCS_LEN, radio_inst[pan_idx].sTransmitCcaFailCnt, radio_inst[pan_idx].sTransmitRetry);
-                mac_PTA_Wrokaround();
-                if (radio_inst[pan_idx].sTransmitFrame.mInfo.mTxInfo.mTxDelay > 0)
-                {
-                    mac_TrigTxN(otMacFrameIsAckRequested(&radio_inst[pan_idx].sTransmitFrame), false);
-                }
-                else
-                {
-                    now = otPlatTimeGet();
-                    target_us = now + mac_BackoffDelay();
-                    do
-                    {
-                        now = otPlatTimeGet();
-                    }
-                    while (now < target_us);
-                    mac_TrigTxN(otMacFrameIsAckRequested(&radio_inst[pan_idx].sTransmitFrame), false);
-                }
+                mac_SetBTClkUSInt(MAC_BT_TIMER5, curr_us + diff);
             }
-            break;
-
-            case TX_CCA_FAIL:
+            else
             {
-                otLogNotePlat("TX_CCA_FAIL %u %u cca_fail %u retry %u", otMacFrameGetSequence(&radio_inst[pan_idx].sTransmitFrame), radio_inst[pan_idx].sTransmitFrame.mLength - FCS_LEN, radio_inst[pan_idx].sTransmitCcaFailCnt, radio_inst[pan_idx].sTransmitRetry);
-                mac_PTA_Wrokaround();
-                radio_inst[pan_idx].sTransmitCcaFailCnt++;
-                if (radio_inst[pan_idx].sTransmitFrame.mInfo.mTxInfo.mTxDelay > 0)
-                {
-                    mac_TrigTxN(otMacFrameIsAckRequested(&radio_inst[pan_idx].sTransmitFrame), false);
-                }
-                else
-                {
-                    now = otPlatTimeGet();
-                    target_us = now + mac_BackoffDelay();
-                    do
-                    {
-                        now = otPlatTimeGet();
-                    }
-                    while (now < target_us);
-                    mac_TrigTxN(otMacFrameIsAckRequested(&radio_inst[pan_idx].sTransmitFrame), false);
-                }
+                mac_SetBTClkUSInt(MAC_BT_TIMER1, curr_us + diff);
             }
-            break;
-
-            case TX_NO_ACK:
-            {
-                otLogNotePlat("TX_NO_ACK %u %u cca_fail %u retry %u", otMacFrameGetSequence(&radio_inst[pan_idx].sTransmitFrame), radio_inst[pan_idx].sTransmitFrame.mLength - FCS_LEN, radio_inst[pan_idx].sTransmitCcaFailCnt, radio_inst[pan_idx].sTransmitRetry);
-                mac_PTA_Wrokaround();
-                if (radio_inst[pan_idx].sTransmitFrame.mInfo.mTxInfo.mTxDelay > 0)
-                {
-                    otPlatRadioTxDone(aInstance, &radio_inst[pan_idx].sTransmitFrame, NULL, OT_ERROR_NO_ACK);
-                    mpan_tx_unlock();
-                }
-                else
-                {
-                    radio_inst[pan_idx].sTransmitRetry++;
-                    if (radio_inst[pan_idx].sTransmitRetry == MAX_TRANSMIT_RETRY)
-                    {
-                        otPlatRadioTxDone(aInstance, &radio_inst[pan_idx].sTransmitFrame, NULL, OT_ERROR_NO_ACK);
-                        mpan_tx_unlock();
-                    }
-                    else
-                    {
-                        now = otPlatTimeGet();
-                        target_us = now + mac_BackoffDelay();
-                        do
-                        {
-                            now = otPlatTimeGet();
-                        }
-                        while (now < target_us);
-                        mac_TrigTxN(otMacFrameIsAckRequested(&radio_inst[pan_idx].sTransmitFrame), false);
-                    }
-                }
-            }
-            break;
-
-            case ED_SCAN:
-            {
-                mpan_tx_lock(pan_idx);
-                setChannel(radio_inst[pan_idx].sEnergyDetectionChannel, pan_idx);
-
-                mac_EDScan_begin(radio_inst[pan_idx].sEnergyDetectionTime / 128);
-                os_sem_take(radio_inst[pan_idx].edscan_done, 0xffffffff);
-                mac_EDScan_end(&ed_value_raw);
-                ed_value = mac_edscan_level2dbm(ed_value_raw);
-
-                setChannel(radio_inst[pan_idx].saved_channel, pan_idx);
-                otPlatRadioEnergyScanDone(aInstance, ed_value);
-                mpan_tx_unlock();
-            }
-            break;
-
-            case ENTER_SLEEP:
-            {
-                //BEE_SleepProcess(aInstance, pan_idx);
-            }
-            break;
-
-            default:
-            break;
+        }
+        else
+        {
+            BEE_EventSend(ALARM_US, pan_idx);
         }
     }
 }
@@ -1203,18 +1342,292 @@ typedef struct _aux_sec_ctl_t
     uint8_t rsv: 1;
 } aux_sec_ctl_t;
 
+void BEE_BufferInfo(otInstance *aInstance)
+{
+#if (BUILD_RCP == 1)
+#else
+    otBufferInfo info;
+    otMessageGetBufferInfo(aInstance, &info);
+    otLogNotePlat("free %u 6losend %u 6loreas %u ip6 %u mpl %u mle %u coap %u coaps %u appcoap %u",
+                  info.mFreeBuffers, info.m6loSendQueue.mNumBuffers, info.m6loReassemblyQueue.mNumBuffers,
+                  info.mIp6Queue.mNumBuffers, info.mMplQueue.mNumBuffers, info.mMleQueue.mNumBuffers,
+                  info.mCoapQueue.mNumBuffers, info.mCoapSecureQueue.mNumBuffers, info.mApplicationCoapQueue.mNumBuffers);
+#endif
+}
+
+bool readFrame(rx_item_t *item, uint8_t pan_idx);
+void BEE_RadioRx(otInstance *aInstance, uint8_t pan_idx)
+{
+    rx_item_t *rx_item;
+
+    if (radio_inst[pan_idx].rx_head != radio_inst[pan_idx].rx_tail)
+    {
+        rx_item = &radio_inst[pan_idx].rx_queue[radio_inst[pan_idx].rx_head];
+        readFrame(rx_item, pan_idx);
+        otPlatRadioReceiveDone(aInstance, &rx_item->sReceivedFrames, OT_ERROR_NONE);
+        radio_inst[pan_idx].rx_head = (radio_inst[pan_idx].rx_head + 1) % RX_BUF_SIZE;
+    }
+}
+
+void BEE_RadioTx(otInstance *aInstance, uint8_t pan_idx)
+{
+    uint64_t now;
+    uint64_t target_us;
+    uint8_t ret;
+
+    fc_t *p_fc;
+    uint8_t *p_frame;
+    uint8_t *p_ie_hdr;
+    uint8_t ie_hdr_len;
+
+    do
+    {
+        switch (radio_inst[pan_idx].tx_result)
+        {
+        case TX_WAIT_ACK:
+            if (radio_inst[pan_idx].ack_receive_done)
+            {
+                radio_inst[pan_idx].ack_receive_done = false;
+                if (otMacFrameIsVersion2015(&radio_inst[pan_idx].sTransmitFrame))
+                {
+                    readFrame(&radio_inst[pan_idx].ack_received, pan_idx);
+#if defined(RT_PLATFORM_BEE3PLUS)
+                    p_fc = (fc_t *)&radio_inst[pan_idx].ack_received.sReceivedPsdu[1];
+                    p_frame = radio_inst[pan_idx].ack_received.sReceivedPsdu;
+                    p_ie_hdr = mac_802154_frame_parser_ie_header_get(p_frame);
+                    if (p_ie_hdr)
+                    {
+                        ie_hdr_len = radio_inst[pan_idx].ack_received.sReceivedFrames.mPsdu +
+                                     otMacFrameGetHeaderLength(&radio_inst[pan_idx].ack_received.sReceivedFrames) -
+                                     p_ie_hdr;
+                    }
+                    radio_inst[pan_idx].ack_item.sReceivedFrames.mPsdu = &radio_inst[pan_idx].ack_item.sReceivedPsdu[1];
+                    otMacFrameGenerateImmAck(&radio_inst[pan_idx].sTransmitFrame, p_fc->pending,
+                                             &radio_inst[pan_idx].ack_item.sReceivedFrames);
+                    p_fc = (fc_t *)&radio_inst[pan_idx].ack_item.sReceivedPsdu[1];
+                    if (p_ie_hdr)
+                    {
+                        memcpy(&radio_inst[pan_idx].ack_item.sReceivedFrames.mPsdu[3], p_ie_hdr, ie_hdr_len);
+                        p_fc->ie_present = 1;
+                        radio_inst[pan_idx].ack_item.sReceivedFrames.mLength += ie_hdr_len;
+                    }
+                    p_fc->ver = FRAME_VER_2015;
+                    mpan_mac_unlock();
+                    otPlatRadioTxDone(aInstance, &radio_inst[pan_idx].sTransmitFrame,
+                                      &radio_inst[pan_idx].ack_item.sReceivedFrames, OT_ERROR_NONE);
+#else
+                    mpan_mac_unlock();
+                    otPlatRadioTxDone(aInstance, &radio_inst[pan_idx].sTransmitFrame,
+                                      &radio_inst[pan_idx].ack_received.sReceivedFrames, OT_ERROR_NONE);
+#endif
+                }
+                else
+                {
+                    radio_inst[pan_idx].ack_item.sReceivedFrames.mPsdu = &radio_inst[pan_idx].ack_item.sReceivedPsdu[1];
+                    otMacFrameGenerateImmAck(&radio_inst[pan_idx].sTransmitFrame, radio_inst[pan_idx].ack_fp,
+                                             &radio_inst[pan_idx].ack_item.sReceivedFrames);
+                    mpan_mac_unlock();
+                    otPlatRadioTxDone(aInstance, &radio_inst[pan_idx].sTransmitFrame,
+                                      &radio_inst[pan_idx].ack_item.sReceivedFrames, OT_ERROR_NONE);
+                }
+            }
+            else
+            {
+                mac_PTA_Wrokaround();
+                otLogNotePlat("TX_WAIT_ACK tmo %u %u cca_fail %u tx_backoff_delay %u retry %u",
+                              radio_inst[pan_idx].sTransmitFrame.mPsdu[2],
+                              radio_inst[pan_idx].sTransmitFrame.mLength - FCS_LEN,
+                              radio_inst[pan_idx].sTransmitCcaFailCnt,
+                              radio_inst[pan_idx].tx_backoff_delay,
+                              radio_inst[pan_idx].sTransmitRetry);
+                mpan_mac_unlock();
+                otPlatRadioTxDone(aInstance, &radio_inst[pan_idx].sTransmitFrame, NULL, OT_ERROR_NO_ACK);
+            }
+            break;
+
+        case TX_OK:
+            {
+                mpan_mac_unlock();
+                otPlatRadioTxDone(aInstance, &radio_inst[pan_idx].sTransmitFrame, NULL, OT_ERROR_NONE);
+            }
+            break;
+
+        case TX_TERMED:
+            {
+                mac_PTA_Wrokaround();
+                otLogNotePlat("TX_TERMED %u %u cca_fail %u tx_backoff_delay %u retry %u",
+                              radio_inst[pan_idx].sTransmitFrame.mPsdu[2],
+                              radio_inst[pan_idx].sTransmitFrame.mLength - FCS_LEN,
+                              radio_inst[pan_idx].sTransmitCcaFailCnt,
+                              radio_inst[pan_idx].tx_backoff_delay,
+                              radio_inst[pan_idx].sTransmitRetry);
+                if (radio_inst[pan_idx].sTransmitFrame.mInfo.mTxInfo.mTxDelay > 0 || radio_inst[pan_idx].sDuringWakeup)
+                {
+                    mac_SetTxNCsmaDetail(false, 0);
+                }
+                else
+                {
+                    mac_SetTxNCsmaDetail(true, 3+radio_inst[pan_idx].sTransmitCcaFailCnt);
+                }
+                ret = mpan_TrigTxN(otMacFrameIsAckRequested(&radio_inst[pan_idx].sTransmitFrame), false, pan_idx);
+                while (MAC_STS_CHANNEL_BUSY == ret)
+                {
+                    otLogNotePlat("TX_PTA_NOT_GNT %u %u", radio_inst[pan_idx].sTransmitFrame.mPsdu[2],
+                                  radio_inst[pan_idx].sTransmitFrame.mLength - FCS_LEN);
+                    ret = mpan_TrigTxN(otMacFrameIsAckRequested(&radio_inst[pan_idx].sTransmitFrame), false, pan_idx);
+                }
+            }
+            break;
+
+        case TX_NO_ACK:
+            {
+                mac_PTA_Wrokaround();
+                otLogNotePlat("TX_NO_ACK %u %u cca_fail %u tx_backoff_delay %u retry %u",
+                              radio_inst[pan_idx].sTransmitFrame.mPsdu[2],
+                              radio_inst[pan_idx].sTransmitFrame.mLength - FCS_LEN,
+                              radio_inst[pan_idx].sTransmitCcaFailCnt,
+                              radio_inst[pan_idx].tx_backoff_delay,
+                              radio_inst[pan_idx].sTransmitRetry);
+                mpan_mac_unlock();
+                otPlatRadioTxDone(aInstance, &radio_inst[pan_idx].sTransmitFrame, NULL, OT_ERROR_NO_ACK);
+            }
+            break;
+
+        case TX_CCA_FAIL:
+            {
+                mac_PTA_Wrokaround();
+                otLogNotePlat("TX_CCA_FAIL %u %u cca_fail %u tx_backoff_delay %u retry %u",
+                              radio_inst[pan_idx].sTransmitFrame.mPsdu[2],
+                              radio_inst[pan_idx].sTransmitFrame.mLength - FCS_LEN,
+                              radio_inst[pan_idx].sTransmitCcaFailCnt,
+                              radio_inst[pan_idx].tx_backoff_delay,
+                              radio_inst[pan_idx].sTransmitRetry);
+                if (radio_inst[pan_idx].sTransmitFrame.mInfo.mTxInfo.mTxDelay > 0 || radio_inst[pan_idx].sDuringWakeup)
+                {
+                    mac_SetTxNCsmaDetail(false, 0);
+                    ret = mpan_TrigTxN(otMacFrameIsAckRequested(&radio_inst[pan_idx].sTransmitFrame), false, pan_idx);
+                    while (MAC_STS_CHANNEL_BUSY == ret)
+                    {
+                        otLogNotePlat("TX_PTA_NOT_GNT %u %u", radio_inst[pan_idx].sTransmitFrame.mPsdu[2],
+                                      radio_inst[pan_idx].sTransmitFrame.mLength - FCS_LEN);
+                        ret = mpan_TrigTxN(otMacFrameIsAckRequested(&radio_inst[pan_idx].sTransmitFrame), false, pan_idx);
+                    }
+                }
+                else
+                {
+                    radio_inst[pan_idx].sTransmitCcaFailCnt++;
+                    if (radio_inst[pan_idx].sTransmitCcaFailCnt == MAX_TRANSMIT_CCAFAIL)
+                    {
+                        mpan_mac_unlock();
+                        otPlatRadioTxDone(aInstance, &radio_inst[pan_idx].sTransmitFrame, NULL, OT_ERROR_CHANNEL_ACCESS_FAILURE);
+                    }
+                    else
+                    {
+                        mac_SetTxNCsmaDetail(true, 3+radio_inst[pan_idx].sTransmitCcaFailCnt);
+                        ret = mpan_TrigTxN(otMacFrameIsAckRequested(&radio_inst[pan_idx].sTransmitFrame), false, pan_idx);
+                        while (MAC_STS_CHANNEL_BUSY == ret)
+                        {
+                            otLogNotePlat("TX_PTA_NOT_GNT %u %u", radio_inst[pan_idx].sTransmitFrame.mPsdu[2],
+                                          radio_inst[pan_idx].sTransmitFrame.mLength - FCS_LEN);
+                            ret = mpan_TrigTxN(otMacFrameIsAckRequested(&radio_inst[pan_idx].sTransmitFrame), false, pan_idx);
+                        }
+                    }
+                }
+            }
+            break;
+
+        case TX_PTA_FAIL:
+            {
+                mac_PTA_Wrokaround();
+                otLogNotePlat("TX_PTA_FAIL %u %u cca_fail %u retry %u", radio_inst[pan_idx].sTransmitFrame.mPsdu[2],
+                              radio_inst[pan_idx].sTransmitFrame.mLength - FCS_LEN, radio_inst[pan_idx].sTransmitCcaFailCnt,
+                              radio_inst[pan_idx].sTransmitRetry);
+                if (radio_inst[pan_idx].sTransmitFrame.mInfo.mTxInfo.mTxDelay > 0 || radio_inst[pan_idx].sDuringWakeup)
+                {
+                    mac_SetTxNCsmaDetail(false, 0);
+                }
+                else
+                {
+                    mac_SetTxNCsmaDetail(true, 3+radio_inst[pan_idx].sTransmitCcaFailCnt);
+                }
+                ret = mpan_TrigTxN(otMacFrameIsAckRequested(&radio_inst[pan_idx].sTransmitFrame), false, pan_idx);
+                while (MAC_STS_CHANNEL_BUSY == ret)
+                {
+                    otLogNotePlat("TX_PTA_NOT_GNT %u %u", radio_inst[pan_idx].sTransmitFrame.mPsdu[2],
+                                  radio_inst[pan_idx].sTransmitFrame.mLength - FCS_LEN);
+                    ret = mpan_TrigTxN(otMacFrameIsAckRequested(&radio_inst[pan_idx].sTransmitFrame), false, pan_idx);
+                }
+            }
+            break;
+
+        case TX_AT_FAIL:
+            {
+                mac_PTA_Wrokaround();
+                otLogNotePlat("TX_AT_FAIL %u %u cca_fail %u retry %u", radio_inst[pan_idx].sTransmitFrame.mPsdu[2],
+                              radio_inst[pan_idx].sTransmitFrame.mLength - FCS_LEN, radio_inst[pan_idx].sTransmitCcaFailCnt,
+                              radio_inst[pan_idx].sTransmitRetry);
+                if (radio_inst[pan_idx].sTransmitFrame.mInfo.mTxInfo.mTxDelay > 0 || radio_inst[pan_idx].sDuringWakeup)
+                {
+                    mac_SetTxNCsmaDetail(false, 0);
+                }
+                else
+                {
+                    mac_SetTxNCsmaDetail(true, 3+radio_inst[pan_idx].sTransmitCcaFailCnt);
+                }
+                ret = mpan_TrigTxN(otMacFrameIsAckRequested(&radio_inst[pan_idx].sTransmitFrame), false, pan_idx);
+                while (MAC_STS_CHANNEL_BUSY == ret)
+                {
+                    otLogNotePlat("TX_PTA_NOT_GNT %u %u", radio_inst[pan_idx].sTransmitFrame.mPsdu[2],
+                                  radio_inst[pan_idx].sTransmitFrame.mLength - FCS_LEN);
+                    ret = mpan_TrigTxN(otMacFrameIsAckRequested(&radio_inst[pan_idx].sTransmitFrame), false, pan_idx);
+                }
+            }
+            break;
+
+        default:
+            break;
+        }
+    }
+    while (0);
+}
+
+void BEE_RadioEnergyScan(otInstance *aInstance, uint8_t pan_idx)
+{
+    uint8_t ed_value_raw;
+    int8_t ed_value;
+
+    do
+    {
+        mpan_mac_lock(pan_idx);
+        setChannel(radio_inst[pan_idx].sEnergyDetectionChannel, pan_idx);
+        mpan_mac_unlock();
+
+        mpan_mac_lock(pan_idx);
+        while (!mac_GrantPHYStatus());
+        mac_EDScan_begin(radio_inst[pan_idx].sEnergyDetectionTime / 128);
+        os_sem_take(radio_inst[pan_idx].edscan_done, 0xffffffff);
+        mac_EDScan_end(&ed_value_raw);
+        ed_value = mac_edscan_level2dbm(ed_value_raw);
+        otPlatRadioEnergyScanDone(aInstance, ed_value);
+        mpan_mac_unlock();
+    }
+    while (0);
+}
+
 #if OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
 static uint16_t getCslPhase(uint8_t pan_idx)
 {
     uint32_t curTime       = otPlatAlarmMicroGetNow();
     uint32_t cslPeriodInUs = radio_inst[pan_idx].sCslPeriod * OT_US_PER_TEN_SYMBOLS;
-    uint32_t diff = (cslPeriodInUs - (curTime % cslPeriodInUs) + (radio_inst[pan_idx].sCslSampleTime % cslPeriodInUs)) %
+    uint32_t diff = (cslPeriodInUs - (curTime % cslPeriodInUs) + (radio_inst[pan_idx].sCslSampleTime %
+                                                                  cslPeriodInUs)) %
                     cslPeriodInUs;
     return (uint16_t)(diff / OT_US_PER_TEN_SYMBOLS + 1);
 }
 #endif
 
-void BEE_tx_ack_started(uint8_t *p_data, int8_t power, uint8_t lqi, uint8_t pan_idx)
+APP_RAM_TEXT_SECTION void BEE_tx_ack_started(uint8_t *p_data, int8_t power, uint8_t lqi,
+                                             uint8_t pan_idx)
 {
     otRadioFrame ackFrame;
     csl_ie_t *p_csl_ie;
@@ -1239,7 +1652,8 @@ void BEE_tx_ack_started(uint8_t *p_data, int8_t power, uint8_t lqi, uint8_t pan_
 #if OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
     if (radio_inst[pan_idx].sCslPeriod > 0)
     {
-        p_csl_ie = (csl_ie_t *)&radio_inst[pan_idx].sEnhAckPsdu[MAC_FRAME_TX_HDR_LEN + radio_inst[pan_idx].sCslIeIndex];
+        p_csl_ie = (csl_ie_t *)&radio_inst[pan_idx].sEnhAckPsdu[MAC_FRAME_TX_HDR_LEN +
+                                                                radio_inst[pan_idx].sCslIeIndex];
         p_csl_ie->phase = getCslPhase(pan_idx);
         p_csl_ie->period = radio_inst[pan_idx].sCslPeriod;
     }
@@ -1251,7 +1665,8 @@ void BEE_tx_ack_started(uint8_t *p_data, int8_t power, uint8_t lqi, uint8_t pan_
         otMacFrameGetDstAddr(&ackFrame, &macAddress);
         if ((linkMetricsDataLen = otLinkMetricsEnhAckGenData(&macAddress, lqi, power, linkMetricsData)) > 0)
         {
-            p_vendor_ie = (vendor_ie_t *)&radio_inst[pan_idx].sEnhAckPsdu[MAC_FRAME_TX_HDR_LEN + radio_inst[pan_idx].sVendorIeIndex];
+            p_vendor_ie = (vendor_ie_t *)&radio_inst[pan_idx].sEnhAckPsdu[MAC_FRAME_TX_HDR_LEN +
+                                                                          radio_inst[pan_idx].sVendorIeIndex];
             p_vendor_ie->oui[0] = 0x9b;
             p_vendor_ie->oui[1] = 0xb8;
             p_vendor_ie->oui[2] = 0xea;
@@ -1262,8 +1677,6 @@ void BEE_tx_ack_started(uint8_t *p_data, int8_t power, uint8_t lqi, uint8_t pan_
 #endif
 #endif
 }
-
-extern volatile uint64_t bt_clk_offset;
 
 static uint8_t prev_rx_seq = 0;
 static uint8_t prev_rx_src_addrmode = 0;
@@ -1292,33 +1705,6 @@ bool readFrame(rx_item_t *item, uint8_t pan_idx)
     rssi = mac_GetRSSIFromRaw(prx_fifo_tail->rssi, channel);
     lqi = prx_fifo_tail->lqi;
 
-    if (radio_inst[pan_idx].enhack_frm_len > 0 && mac_GetTxEnhAckPending())
-    {
-        BEE_tx_ack_started(&radio_inst[pan_idx].sEnhAckPsdu[1], rssi, lqi, pan_idx);
-        if (radio_inst[pan_idx].enhack_frm_sec_en)
-        {
-            mac_LoadTxEnhAckPayload(radio_inst[pan_idx].enhack_frm_len, radio_inst[pan_idx].enhack_frm_len, &radio_inst[pan_idx].sEnhAckPsdu[2]);
-            txAckProcessSecurity(&radio_inst[pan_idx].sEnhAckPsdu[1], pan_idx);
-        }
-        else
-        {
-            mac_LoadTxEnhAckPayload(0, radio_inst[pan_idx].enhack_frm_len, &radio_inst[pan_idx].sEnhAckPsdu[2]);
-        }
-        if (MAC_STS_SUCCESS == mac_TrigTxEnhAck(false, radio_inst[pan_idx].enhack_frm_sec_en))
-        {
-            radio_inst[pan_idx].enhack_frm_len = 0;
-            if (radio_inst[pan_idx].enhack_frm_sec_en)
-            {
-                radio_inst[pan_idx].enhack_frm_sec_en = false;
-                radio_inst[pan_idx].sMacFrameCounter++;
-            }
-        }
-        else
-        {
-            otLogInfoPlat("enhack tx timeout");
-        }
-    }
-
     p_data = &item->sReceivedPsdu[0];
     receivedFrame->mPsdu               = &p_data[1];
     receivedFrame->mLength             = p_data[0];
@@ -1327,7 +1713,7 @@ bool readFrame(rx_item_t *item, uint8_t pan_idx)
     receivedFrame->mInfo.mRxInfo.mLqi  = lqi;
 
     // Inform if this frame was acknowledged with frame pending set.
-    receivedFrame->mInfo.mRxInfo.mAckedWithFramePending = radio_inst[pan_idx].sAckedWithFramePending;
+    //receivedFrame->mInfo.mRxInfo.mAckedWithFramePending = radio_inst[pan_idx].sAckedWithFramePending;
 
     // 0x7E header cmdid propid STREAM_RAW crc16 0x7E
     // Get the timestamp when the SFD was received
@@ -1335,7 +1721,7 @@ bool readFrame(rx_item_t *item, uint8_t pan_idx)
                                               (receivedFrame->mLength * 32) -
                                               PHY_HDR_SYMBOL_TIME_US;
 
-#if OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2
+#if 0
     // Inform if this frame was acknowledged with secured Enh-ACK.
     if (p_data[ACK_REQUEST_OFFSET] & ACK_REQUEST_BIT && otMacFrameIsVersion2015(receivedFrame))
     {
@@ -1367,7 +1753,8 @@ void BEE_tx_started(uint8_t *p_data, uint8_t pan_idx)
 #if OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
     if (radio_inst[pan_idx].sCslPeriod > 0)
     {
-        otMacFrameSetCslIe(&radio_inst[pan_idx].sTransmitFrame, (uint16_t)radio_inst[pan_idx].sCslPeriod, getCslPhase(pan_idx));
+        otMacFrameSetCslIe(&radio_inst[pan_idx].sTransmitFrame, (uint16_t)radio_inst[pan_idx].sCslPeriod,
+                           getCslPhase(pan_idx));
     }
 #endif
 
@@ -1410,7 +1797,8 @@ void txProcessSecurity(uint8_t *aFrame, uint8_t pan_idx)
     } __attribute__((packed)) nonce;
     nonce.sec_level = otMacFrameGetSecurityLevel(&radio_inst[pan_idx].sTransmitFrame);
     nonce.frame_counter = otMacFrameGetFrameCounter(&radio_inst[pan_idx].sTransmitFrame);
-    mac_memcpy((uint8_t *)&nonce.src_ext_addr, mpan_GetLongAddress(pan_idx), sizeof(nonce.src_ext_addr));
+    mac_memcpy((uint8_t *)&nonce.src_ext_addr, mpan_GetLongAddress(pan_idx),
+               sizeof(nonce.src_ext_addr));
 
     // set nonce
     mac_LoadNonce((uint8_t *)&nonce);
@@ -1521,6 +1909,13 @@ uint8_t otPlatRadioGetCslAccuracy(otInstance *aInstance)
 
     return otPlatTimeGetXtalAccuracy() / 2;
 }
+
+uint8_t otPlatRadioGetCslClockUncertainty(otInstance *aInstance)
+{
+    OT_UNUSED_VARIABLE(aInstance);
+
+    return CSL_UNCERT;
+}
 #endif // OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
 
 #if OPENTHREAD_CONFIG_MLE_LINK_METRICS_SUBJECT_ENABLE
@@ -1577,8 +1972,9 @@ exit:
     return error;
 }
 
-static uint8_t generate_ieee_enhack_frame(uint8_t *txbuf, uint8_t buf_len, fc_t *fc, uint8_t seq,
-                                          uint16_t dpid, uint8_t *dadr, uint8_t aux_len, uint8_t *aux, uint8_t pan_idx)
+APP_RAM_TEXT_SECTION uint8_t generate_ieee_enhack_frame(uint8_t *txbuf, uint8_t buf_len, fc_t *fc,
+                                                        uint8_t seq,
+                                                        uint16_t dpid, uint8_t *dadr, uint8_t aux_len, uint8_t *aux, uint8_t pan_idx)
 {
     uint8_t len = 0;
     csl_ie_t *p_csl_ie;
@@ -1668,250 +2064,336 @@ static uint8_t generate_ieee_enhack_frame(uint8_t *txbuf, uint8_t buf_len, fc_t 
     return len;
 }
 
-#define TXNS_OFFSET     0
-#define CCAFAIL_OFFSET  5
+#define TXNS_OFFSET         0
+#define CCAFAIL_OFFSET      5
+#define PTA_TX_FAIL_OFFSET  6
 
-    void txn_handler(uint8_t pan_idx, uint32_t arg)
+#define ACK_REQ_OFFSET  2
+#define ACK_TYPE_OFFSET 3
+
+APP_RAM_TEXT_SECTION void mac_report_pta_grant_failed(uint8_t pan_idx)
+{
+    radio_inst[pan_idx].tx_result = TX_PTA_FAIL;
+    BEE_EventSend(TX_DONE, pan_idx);
+    if (pan_idx == 0) { otSysEventSignalPending(); }
+    else { zbSysEventSignalPending(); }
+}
+
+APP_RAM_TEXT_SECTION void txnterr_handler(uint8_t pan_idx, uint32_t txat_status)
+{
+    radio_inst[pan_idx].tx_result = TX_AT_FAIL;
+    BEE_EventSend(TX_DONE, pan_idx);
+    if (pan_idx == 0) { otSysEventSignalPending(); }
+    else { zbSysEventSignalPending(); }
+}
+
+APP_RAM_TEXT_SECTION void txn_handler(uint8_t pan_idx, uint32_t txn_trig)
+{
+    uint8_t tx_status = mac_GetTxNStatus();
+    if (tx_status & (1 << PTA_TX_FAIL_OFFSET))
     {
-        uint8_t tx_status = mac_GetTxNStatus();
-        if (tx_status & (1<<CCAFAIL_OFFSET))
+        radio_inst[pan_idx].tx_result = TX_PTA_FAIL;
+    }
+    else if (tx_status & (1 << CCAFAIL_OFFSET))
+    {
+        radio_inst[pan_idx].tx_result = TX_CCA_FAIL;
+    }
+    else
+    {
+        if (tx_status & (1 << TXNS_OFFSET))
         {
-            BEE_EventSend(TX_CCA_FAIL, pan_idx);
-            if (pan_idx == 0) otSysEventSignalPending();
-            else zbSysEventSignalPending();
-        }
-        else
-        {
-            if (tx_status & (1<<TXNS_OFFSET))
+            if (mac_GetTxNTermedStatus())
             {
-                if (mac_GetTxNTermedStatus())
-                {
-                    BEE_EventSend(TX_NOT_GNT, pan_idx);
-                    if (pan_idx == 0) otSysEventSignalPending();
-                    else zbSysEventSignalPending();
-                }
-                else
-                {
-                    BEE_EventSend(TX_NO_ACK, pan_idx);
-                    if (pan_idx == 0) otSysEventSignalPending();
-                    else zbSysEventSignalPending();
-                }
+                radio_inst[pan_idx].tx_result = TX_TERMED;
             }
             else
             {
-                if (otMacFrameIsAckRequested(&radio_inst[pan_idx].sTransmitFrame))
+                if (txn_trig & (1 << ACK_TYPE_OFFSET))
                 {
-                    if (otMacFrameIsVersion2015(&radio_inst[pan_idx].sTransmitFrame))
-                    {
-#ifdef RT_PLATFORM_BEE3PLUS
-                        radio_inst[pan_idx].ack_item.sReceivedFrames.mPsdu = &radio_inst[pan_idx].ack_item.sReceivedPsdu[1];
-                        otMacFrameGenerateImmAck(&radio_inst[pan_idx].sTransmitFrame, mac_GetImmAckPendingBit(), &radio_inst[pan_idx].ack_item.sReceivedFrames);
-                        fc_t *p_fc = (fc_t *)&radio_inst[pan_idx].ack_item.sReceivedPsdu[1];
-                        p_fc->ver == FRAME_VER_2015;
-                        BEE_EventSend(TX_WAIT_ACK, pan_idx);
-                        if (pan_idx == 0) otSysEventSignalPending();
-                        else zbSysEventSignalPending();
-#endif
-                    }
-                    else
-                    {
-                        radio_inst[pan_idx].ack_item.sReceivedFrames.mPsdu = &radio_inst[pan_idx].ack_item.sReceivedPsdu[1];
-                        otMacFrameGenerateImmAck(&radio_inst[pan_idx].sTransmitFrame, mac_GetImmAckPendingBit(), &radio_inst[pan_idx].ack_item.sReceivedFrames);
-                        BEE_EventSend(TX_WAIT_ACK, pan_idx);
-                        if (pan_idx == 0) otSysEventSignalPending();
-                        else zbSysEventSignalPending();
-                    }
+                    radio_inst[pan_idx].tx_result = TX_WAIT_ACK;
                 }
                 else
                 {
-                    BEE_EventSend(TX_OK, pan_idx);
-                    if (pan_idx == 0) otSysEventSignalPending();
-                    else zbSysEventSignalPending();
+                    radio_inst[pan_idx].tx_result = TX_NO_ACK;
                 }
             }
         }
-    }
-
-    void rxely_handler(uint8_t pan_idx, uint32_t arg)
-    {
-        fc_t fc_ack;
-        struct
+        else
         {
-            aux_sec_ctl_t sec_ctl;
-            uint32_t frame_counter;
-            uint8_t key_id;
-        } __attribute__((packed)) aux;
-
-        do
-        {
-#if OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2
-            if (FRAME_VER_2015 == mac_GetRxFrmVersion())
+            if (txn_trig & (1 << ACK_REQ_OFFSET))
             {
-                if (!mac_GetRxFrmAckReq())
+                if (txn_trig & (1 << ACK_TYPE_OFFSET))
                 {
-                    radio_inst[pan_idx].sAckedWithFramePending = false;
-                    break;
-                }
-
-                uint16_t panid;
-                uint16_t saddr;
-                uint64_t laddr;
-
-                radio_inst[pan_idx].enhack_frm_sec_en = mac_GetRxFrmSecEn();
-                fc_ack.type = FRAME_TYPE_ACK;
-                fc_ack.sec_en = radio_inst[pan_idx].enhack_frm_sec_en;
-                if (mac_GetSrcMatchStatus())
-                {
-                    mac_ClrSrcMatchStatus();
-                    radio_inst[pan_idx].sAckedWithFramePending = true;
                 }
                 else
                 {
-                    radio_inst[pan_idx].sAckedWithFramePending = false;
+                    radio_inst[pan_idx].ack_fp = mac_GetImmAckPendingBit();
+                    radio_inst[pan_idx].ack_receive_done = true;
                 }
-                fc_ack.pending = radio_inst[pan_idx].sAckedWithFramePending;
-                fc_ack.ack_req = 0;
-                fc_ack.panid_compress = mac_GetRxFrmPanidCompress();
-                fc_ack.rsv = 0;
-                fc_ack.seq_num_suppress = 0;
-                fc_ack.ie_present = 0;
+                radio_inst[pan_idx].tx_result = TX_WAIT_ACK;
+            }
+            else
+            {
+                radio_inst[pan_idx].tx_result = TX_OK;
+            }
+        }
+    }
+    BEE_EventSend(TX_DONE, pan_idx);
+    if (pan_idx == 0) { otSysEventSignalPending(); }
+    else { zbSysEventSignalPending(); }
+}
+
+APP_RAM_TEXT_SECTION void rxely_handler(uint8_t pan_idx, uint32_t arg)
+{
+    fc_t fc_ack;
+    struct
+    {
+        aux_sec_ctl_t sec_ctl;
+        uint32_t frame_counter;
+        uint8_t key_id;
+    } __attribute__((packed)) aux;
+
+    do
+    {
+#if OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2
+        if (FRAME_VER_2015 == mac_GetRxFrmVersion())
+        {
+            if (!mac_GetRxFrmAckReq())
+            {
+                radio_inst[pan_idx].rx_queue[radio_inst[pan_idx].rx_tail].sReceivedFrames.mInfo.mRxInfo.mAckedWithFramePending
+                    = false;
+                break;
+            }
+
+            uint16_t panid;
+            uint16_t saddr;
+            uint64_t laddr;
+
+            radio_inst[pan_idx].enhack_frm_sec_en = mac_GetRxFrmSecEn();
+            fc_ack.type = FRAME_TYPE_ACK;
+            fc_ack.sec_en = radio_inst[pan_idx].enhack_frm_sec_en;
+            if (mac_GetSrcMatchStatus())
+            {
+                mac_ClrSrcMatchStatus();
+                radio_inst[pan_idx].rx_queue[radio_inst[pan_idx].rx_tail].sReceivedFrames.mInfo.mRxInfo.mAckedWithFramePending
+                    = true;
+            }
+            else
+            {
+                radio_inst[pan_idx].rx_queue[radio_inst[pan_idx].rx_tail].sReceivedFrames.mInfo.mRxInfo.mAckedWithFramePending
+                    = false;
+            }
+            fc_ack.pending =
+                radio_inst[pan_idx].rx_queue[radio_inst[pan_idx].rx_tail].sReceivedFrames.mInfo.mRxInfo.mAckedWithFramePending;
+            fc_ack.ack_req = 0;
+            fc_ack.panid_compress = mac_GetRxFrmPanidCompress();
+            fc_ack.rsv = 0;
+            fc_ack.seq_num_suppress = 0;
+            fc_ack.ie_present = 0;
 #if OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
-                if (radio_inst[pan_idx].sCslPeriod > 0) { fc_ack.ie_present = 1; }
+            if (radio_inst[pan_idx].sCslPeriod > 0) { fc_ack.ie_present = 1; }
 #endif
 #if OPENTHREAD_CONFIG_MLE_LINK_METRICS_SUBJECT_ENABLE
-                if (radio_inst[pan_idx].enhAckProbingDataLen > 0) { fc_ack.ie_present = 1; }
+            if (radio_inst[pan_idx].enhAckProbingDataLen > 0) { fc_ack.ie_present = 1; }
 #endif
-                fc_ack.dst_addr_mode = mac_GetRxFrmSrcAddrMode();
-                fc_ack.ver = FRAME_VER_2015;
-                fc_ack.src_addr_mode = 0;
+            fc_ack.dst_addr_mode = mac_GetRxFrmSrcAddrMode();
+            fc_ack.ver = FRAME_VER_2015;
+            fc_ack.src_addr_mode = 0;
 
+            if (radio_inst[pan_idx].enhack_frm_sec_en)
+            {
+                aux.sec_ctl.sec_level = mac_GetRxFrmSecLevel();
+                aux.sec_ctl.key_id_mode = mac_GetRxFrmSecKeyIdMode();
+                aux.sec_ctl.frame_counter_supp = 0;
+                aux.sec_ctl.asn_in_nonce = 0;
+                aux.sec_ctl.rsv = 0;
+                // set frame counter
+                aux.frame_counter = radio_inst[pan_idx].sMacFrameCounter;
+                aux.key_id = mac_GetRxFrmSecKeyId();
+            }
+
+            panid = mpan_GetPANId(pan_idx);
+
+            if (fc_ack.dst_addr_mode == ADDR_MODE_SHORT)
+            {
+                saddr = mac_GetRxFrmShortAddr();
+                radio_inst[pan_idx].enhack_frm_len = generate_ieee_enhack_frame(
+                                                         &radio_inst[pan_idx].sEnhAckPsdu[MAC_FRAME_TX_HDR_LEN],
+                                                         IEEE802154_MAX_LENGTH, &fc_ack, mac_GetRxFrmSeq(), panid, (uint8_t *)&saddr, sizeof(aux),
+                                                         (uint8_t *)&aux, pan_idx);
+            }
+            else
+            {
+                laddr = mac_GetRxFrmLongAddr();
+                radio_inst[pan_idx].enhack_frm_len = generate_ieee_enhack_frame(
+                                                         &radio_inst[pan_idx].sEnhAckPsdu[MAC_FRAME_TX_HDR_LEN],
+                                                         IEEE802154_MAX_LENGTH, &fc_ack, mac_GetRxFrmSeq(), panid, (uint8_t *)&laddr, sizeof(aux),
+                                                         (uint8_t *)&aux, pan_idx);
+            }
+
+            radio_inst[pan_idx].sEnhAckPsdu[0] = 0;
+            radio_inst[pan_idx].sEnhAckPsdu[1] = radio_inst[pan_idx].enhack_frm_len + 2;
+#if OPENTHREAD_CONFIG_MLE_LINK_METRICS_SUBJECT_ENABLE
+            if (radio_inst[pan_idx].enhAckProbingDataLen > 0)
+            {
+                mac_SetTxEnhAckPending(radio_inst[pan_idx].enhack_frm_len);
+            }
+            else
+#endif
+            {
+                BEE_tx_ack_started(&radio_inst[pan_idx].sEnhAckPsdu[1], 0, 0, pan_idx);
                 if (radio_inst[pan_idx].enhack_frm_sec_en)
                 {
-                    aux.sec_ctl.sec_level = mac_GetRxFrmSecLevel();
-                    aux.sec_ctl.key_id_mode = mac_GetRxFrmSecKeyIdMode();
-                    aux.sec_ctl.frame_counter_supp = 0;
-                    aux.sec_ctl.asn_in_nonce = 0;
-                    aux.sec_ctl.rsv = 0;
-                    // set frame counter
-                    aux.frame_counter = radio_inst[pan_idx].sMacFrameCounter;
-                    aux.key_id = mac_GetRxFrmSecKeyId();
-                }
-
-                panid = mpan_GetPANId(pan_idx);
-
-                if (fc_ack.dst_addr_mode == ADDR_MODE_SHORT)
-                {
-                    saddr = mac_GetRxFrmShortAddr();
-                    radio_inst[pan_idx].enhack_frm_len = generate_ieee_enhack_frame(&radio_inst[pan_idx].sEnhAckPsdu[MAC_FRAME_TX_HDR_LEN],
-                                                                IEEE802154_MAX_LENGTH, &fc_ack, mac_GetRxFrmSeq(), panid, (uint8_t *)&saddr, sizeof(aux),
-                                                                (uint8_t *)&aux, pan_idx);
+                    mac_LoadTxEnhAckPayload(radio_inst[pan_idx].enhack_frm_len, radio_inst[pan_idx].enhack_frm_len,
+                                            &radio_inst[pan_idx].sEnhAckPsdu[2]);
+                    txAckProcessSecurity(&radio_inst[pan_idx].sEnhAckPsdu[1], pan_idx);
                 }
                 else
                 {
-                    laddr = mac_GetRxFrmLongAddr();
-                    radio_inst[pan_idx].enhack_frm_len = generate_ieee_enhack_frame(&radio_inst[pan_idx].sEnhAckPsdu[MAC_FRAME_TX_HDR_LEN],
-                                                                IEEE802154_MAX_LENGTH, &fc_ack, mac_GetRxFrmSeq(), panid, (uint8_t *)&laddr, sizeof(aux),
-                                                                (uint8_t *)&aux, pan_idx);
+                    mac_LoadTxEnhAckPayload(0, radio_inst[pan_idx].enhack_frm_len, &radio_inst[pan_idx].sEnhAckPsdu[2]);
                 }
-
-                radio_inst[pan_idx].sEnhAckPsdu[0] = 0;
-                radio_inst[pan_idx].sEnhAckPsdu[1] = radio_inst[pan_idx].enhack_frm_len + 2;
-#if OPENTHREAD_CONFIG_MLE_LINK_METRICS_SUBJECT_ENABLE
-                if (radio_inst[pan_idx].enhAckProbingDataLen > 0)
+                mac_TrigTxEnhAck(true, radio_inst[pan_idx].enhack_frm_sec_en);
+                radio_inst[pan_idx].enhack_frm_len = 0;
+                if (radio_inst[pan_idx].enhack_frm_sec_en)
                 {
-                    mac_SetTxEnhAckPending(radio_inst[pan_idx].enhack_frm_len);
-                }
-                else
-#endif
-                {
-                    BEE_tx_ack_started(&radio_inst[pan_idx].sEnhAckPsdu[1], 0, 0, pan_idx);
-                    if (radio_inst[pan_idx].enhack_frm_sec_en)
-                    {
-                        mac_LoadTxEnhAckPayload(radio_inst[pan_idx].enhack_frm_len, radio_inst[pan_idx].enhack_frm_len, &radio_inst[pan_idx].sEnhAckPsdu[2]);
-                        txAckProcessSecurity(&radio_inst[pan_idx].sEnhAckPsdu[1], pan_idx);
-                    }
-                    else
-                    {
-                        mac_LoadTxEnhAckPayload(0, radio_inst[pan_idx].enhack_frm_len, &radio_inst[pan_idx].sEnhAckPsdu[2]);
-                    }
-                    mac_TrigTxEnhAck(true, radio_inst[pan_idx].enhack_frm_sec_en);
-                    radio_inst[pan_idx].enhack_frm_len = 0;
-                    if (radio_inst[pan_idx].enhack_frm_sec_en)
-                    {
-                        radio_inst[pan_idx].enhack_frm_sec_en = false;
-                        radio_inst[pan_idx].sMacFrameCounter++;
-                    }
-                }
-            }
-            else
-#endif
-            {
-                if (!mac_GetRxFrmAckReq())
-                {
-                    radio_inst[pan_idx].sAckedWithFramePending = false;
-                    break;
-                }
-                if (mac_GetSrcMatchStatus())
-                {
-                    mac_ClrSrcMatchStatus();
-                    radio_inst[pan_idx].sAckedWithFramePending = true;
-                }
-                else
-                {
-                    radio_inst[pan_idx].sAckedWithFramePending = false;
+                    radio_inst[pan_idx].enhack_frm_sec_en = false;
                 }
             }
         }
-        while (0);
-    }
-
-    void rxdone_handler(uint8_t pan_idx, uint32_t arg)
-    {
-        if (FRAME_TYPE_ACK == mac_GetRxFrmType())
-        {
-#ifdef RT_PLATFORM_BEE3PLUS
-            mac_RxFlush();
-#else
-            mac_Rx(radio_inst[pan_idx].ack_item.sReceivedPsdu);
-            readFrame(&radio_inst[pan_idx].ack_item, pan_idx);
-            BEE_EventSend(TX_WAIT_ACK, pan_idx);
-            if (pan_idx == 0) otSysEventSignalPending();
-            else zbSysEventSignalPending();
+        else
 #endif
+        {
+            if (!mac_GetRxFrmAckReq())
+            {
+                radio_inst[pan_idx].rx_queue[radio_inst[pan_idx].rx_tail].sReceivedFrames.mInfo.mRxInfo.mAckedWithFramePending
+                    = false;
+                break;
+            }
+            if (mac_GetSrcMatchStatus())
+            {
+                mac_ClrSrcMatchStatus();
+                radio_inst[pan_idx].rx_queue[radio_inst[pan_idx].rx_tail].sReceivedFrames.mInfo.mRxInfo.mAckedWithFramePending
+                    = true;
+            }
+            else
+            {
+                radio_inst[pan_idx].rx_queue[radio_inst[pan_idx].rx_tail].sReceivedFrames.mInfo.mRxInfo.mAckedWithFramePending
+                    = false;
+            }
+        }
+    }
+    while (0);
+}
+
+APP_RAM_TEXT_SECTION void rxdone_handler(uint8_t pan_idx, uint32_t arg)
+{
+    uint8_t frm_len;
+    mac_rxfifo_tail_t *prx_fifo_tail;
+    uint8_t channel;
+    int8_t rssi;
+    uint8_t lqi;
+    uint32_t frame_type = mac_GetRxFrmType();
+#if defined(RT_PLATFORM_BB2ULTRA) || defined(RT_PLATFORM_RTL8922D)
+    uint8_t *buf = (uint8_t *)arg;
+#else
+    uint8_t *buf = NULL;
+#endif
+
+    if (FRAME_TYPE_ACK == frame_type)
+    {
+        mac_Rx(radio_inst[pan_idx].ack_received.sReceivedPsdu);
+        radio_inst[pan_idx].ack_receive_done = true;
+    }
+    else
+    {
+        if (buf == NULL)
+        {
+            mac_Rx(radio_inst[pan_idx].rx_queue[radio_inst[pan_idx].rx_tail].sReceivedPsdu);
         }
         else
         {
-            mac_Rx(radio_inst[pan_idx].rx_queue[radio_inst[pan_idx].rx_tail].sReceivedPsdu);
-            readFrame(&radio_inst[pan_idx].rx_queue[radio_inst[pan_idx].rx_tail], pan_idx);
-            radio_inst[pan_idx].rx_tail = (radio_inst[pan_idx].rx_tail + 1) % RX_BUF_SIZE;
-            if (pan_idx == 0) otSysEventSignalPending();
-            else zbSysEventSignalPending();
+            memcpy(radio_inst[pan_idx].rx_queue[radio_inst[pan_idx].rx_tail].sReceivedPsdu, buf, buf[0] + 8);
         }
-    }
 
-    void btcmp0_handler(uint8_t pan_idx, uint32_t arg)
-    {
-        milli_handler(0);
-    }
+        if (radio_inst[pan_idx].enhack_frm_len > 0 && mac_GetTxEnhAckPending())
+        {
+            frm_len = radio_inst[pan_idx].rx_queue[radio_inst[pan_idx].rx_tail].sReceivedPsdu[0];
+            prx_fifo_tail = (mac_rxfifo_tail_t *)
+                            &radio_inst[pan_idx].rx_queue[radio_inst[pan_idx].rx_tail].sReceivedPsdu[1 + frm_len];
+            channel = mac_GetChannel();
+            rssi = mac_GetRSSIFromRaw(prx_fifo_tail->rssi, channel);
+            lqi = prx_fifo_tail->lqi;
 
-    void btcmp1_handler(uint8_t pan_idx, uint32_t arg)
-    {
-        micro_handler(0);
+            BEE_tx_ack_started(&radio_inst[pan_idx].sEnhAckPsdu[1], rssi, lqi, pan_idx);
+            if (radio_inst[pan_idx].enhack_frm_sec_en)
+            {
+                mac_LoadTxEnhAckPayload(radio_inst[pan_idx].enhack_frm_len, radio_inst[pan_idx].enhack_frm_len,
+                                        &radio_inst[pan_idx].sEnhAckPsdu[2]);
+                txAckProcessSecurity(&radio_inst[pan_idx].sEnhAckPsdu[1], pan_idx);
+            }
+            else
+            {
+                mac_LoadTxEnhAckPayload(0, radio_inst[pan_idx].enhack_frm_len, &radio_inst[pan_idx].sEnhAckPsdu[2]);
+            }
+            if (MAC_STS_SUCCESS == mac_TrigTxEnhAck(false, radio_inst[pan_idx].enhack_frm_sec_en))
+            {
+                radio_inst[pan_idx].enhack_frm_len = 0;
+                if (radio_inst[pan_idx].enhack_frm_sec_en)
+                {
+                    radio_inst[pan_idx].enhack_frm_sec_en = false;
+                }
+            }
+            else
+            {
+                otLogInfoPlat("enhack tx timeout");
+            }
+        }
+        radio_inst[pan_idx].rx_tail = (radio_inst[pan_idx].rx_tail + 1) % RX_BUF_SIZE;
+        BEE_EventSend(RX_OK, pan_idx);
+        if (pan_idx == 0) { otSysEventSignalPending(); }
+        else { zbSysEventSignalPending(); }
     }
+}
 
-    void edscan_handler(uint8_t pan_idx, uint32_t arg)
-    {
-        os_sem_give(radio_inst[pan_idx].edscan_done);
-    }
+APP_RAM_TEXT_SECTION void btcmp0_handler(uint8_t pan_idx, uint32_t arg)
+{
+    milli_handler(0);
+}
 
-#ifdef RT_PLATFORM_BB2ULTRA
-    void btcmp4_handler(uint8_t pan_idx, uint32_t arg)
-    {
-        milli_handler(1);
-    }
+APP_RAM_TEXT_SECTION void btcmp1_handler(uint8_t pan_idx, uint32_t arg)
+{
+    micro_handler(0);
+}
 
-    void btcmp5_handler(uint8_t pan_idx, uint32_t arg)
+APP_RAM_TEXT_SECTION void edscan_handler(uint8_t pan_idx, uint32_t arg)
+{
+    os_sem_give(radio_inst[pan_idx].edscan_done);
+}
+
+#if defined(RT_PLATFORM_BB2ULTRA) || defined(RT_PLATFORM_RTL8922D)
+APP_RAM_TEXT_SECTION void btcmp4_handler(uint8_t pan_idx, uint32_t arg)
+{
+#if defined(DLPS_EN) && (DLPS_EN == 1)
+    zbpm_adapter_t *padapter = &zbpm_adap;
+    if (padapter->power_mode == ZBMAC_DEEP_SLEEP)
     {
-        micro_handler(1);
+        otLogNotePlat("zbpm_enter expired");
+        padapter->power_mode = ZBMAC_ACTIVE;
     }
+#endif
+    milli_handler(1);
+}
+
+APP_RAM_TEXT_SECTION void btcmp5_handler(uint8_t pan_idx, uint32_t arg)
+{
+#if defined(DLPS_EN) && (DLPS_EN == 1)
+    zbpm_adapter_t *padapter = &zbpm_adap;
+    if (padapter->power_mode == ZBMAC_DEEP_SLEEP)
+    {
+        otLogNotePlat("zbpm_enter expired");
+        padapter->power_mode = ZBMAC_ACTIVE;
+    }
+#endif
+    micro_handler(1);
+}
 #endif

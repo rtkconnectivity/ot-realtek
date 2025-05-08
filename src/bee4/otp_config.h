@@ -54,7 +54,11 @@ extern "C" {
  *                        os configuration
  *============================================================================*/
 //add more here
+#if defined(DLPS_EN) && (DLPS_EN == 1)
+#define OS_TICK_TIME                              OS_TICK_10MS
+#else
 #define OS_TICK_TIME                              OS_TICK_1MS
+#endif
 
 /*============================================================================*
  *                        platform configuration

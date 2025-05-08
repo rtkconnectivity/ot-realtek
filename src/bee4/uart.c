@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, The OpenThread Authors.
+ *  Copyright (c) 2025, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -51,7 +51,7 @@
 #include <openthread/platform/uart.h>
 #endif
 #include "mac_driver.h"
-#if(1 == BUILD_RCP)
+#if(1 == BUILD_RCP || 1 == MATTER_ENABLE_CFU)
 #include "board.h"
 #endif
 #if (FEATURE_SUPPORT_CFU && (USE_USB_CDC == USB_TYPE))
@@ -101,6 +101,7 @@ static void *cdc_out_handle = NULL;
 T_CDC_PACKET_DEF cdc_packet;
 #endif
 static uint8_t usb_speed_mode = USB_SPEED_HIGH;
+
 
 typedef enum
 {
@@ -384,6 +385,16 @@ void CdcRecvDataCb(void *handle, void *buf, uint32_t len, int status)
     else
 #endif
     {
+#if MATTER_ENABLE_CFU
+        extern void matter_ble_send_msg(uint16_t sub_type, uint32_t param);
+
+#define ENTER_CFU_MODE_DATA_LEN 13
+#define MATTER_BLE_MSG_ENTER_CFU 0xA0
+        if (len == ENTER_CFU_MODE_DATA_LEN)
+        {
+            matter_ble_send_msg(MATTER_BLE_MSG_ENTER_CFU, 0);
+        }
+#endif
         uint8_t *recv = (uint8_t *)buf;
         for (uint32_t i = 0; i < len; i++)
         {
@@ -391,6 +402,7 @@ void CdcRecvDataCb(void *handle, void *buf, uint32_t len, int status)
             rx_tail = (rx_tail + 1) % kReceiveBufferSize;
         }
 #if (ENABLE_PW_RPC != 1)
+        BEE_EventSend(UART_RX, 0);
         otTaskletsSignalPending(NULL);
 #endif
     }
@@ -438,10 +450,22 @@ void app_usb_spd_cb(uint8_t speed)
     }
 }
 
+static char hex_str[29] = {0};
+void convert_euid_to_hex_string() 
+{
+    const uint8_t* euid_ptr = get_ic_euid();
+    for (int i = 0; i < 14; i++) 
+    {
+        snprintf(&hex_str[i * 2], 3, "%02x", euid_ptr[i]);
+    }
+    hex_str[28] = '\0';
+    dev_strings[2].s = hex_str;
+}
+
 void uart_init_internal(void)
 {
-    uint64_t euid;
-    memcpy(&euid, get_ic_euid(), sizeof(uint64_t));
+    convert_euid_to_hex_string();
+
     os_mutex_create(&uart_tx_mutex);
     os_sem_create(&uart_tx_sem, "cdc_tx", 0, 1);
 
@@ -453,7 +477,6 @@ void uart_init_internal(void)
 
     usb_dev_driver_dev_desc_register((void *)&usb_dev_desc);
     usb_dev_driver_cfg_desc_register((void *)&usb_cfg_desc);
-    dbg_snprintf(dev_strings[2].s, 16, "%llx", euid);
     usb_dev_driver_string_desc_register((void *)dev_stringtabs);
 
     void *inst0 = usb_cdc_driver_inst_alloc();
@@ -548,6 +571,7 @@ otError otPlatUartSend(const uint8_t *aBuf, uint16_t aBufLength)
 {
     uart_send(aBuf, aBufLength);
     sTransmitDone = true;
+    BEE_EventSend(UART_TX, 0);
     otTaskletsSignalPending(NULL);
     return OT_ERROR_NONE;
 }
@@ -740,7 +764,7 @@ void uart_init_internal(void)
     }
 #endif
 
-    UART_InitStruct.rxTriggerLevel = 1;
+    UART_InitStruct.rxTriggerLevel = 16;
     UART_InitStruct.UART_IdleTime       = UART_RX_IDLE_1BYTE;      //idle interrupt wait time
     UART_InitStruct.UART_DmaEn          = UART_DMA_ENABLE;
     UART_InitStruct.UART_TxWaterLevel   = 15; /* Better to equal: TX_FIFO_SIZE - GDMA_MSize */
@@ -749,7 +773,7 @@ void uart_init_internal(void)
     UART_Init(OT_UART, &UART_InitStruct);
 
     UART_INTConfig(OT_UART, UART_INT_RD_AVA, ENABLE);
-    //UART_INTConfig(OT_UART, UART_INT_RX_IDLE, ENABLE);
+    UART_INTConfig(OT_UART, UART_INT_RX_IDLE, ENABLE);
     NVIC_InitStruct.NVIC_IRQChannel = OT_UART_IRQN;
     NVIC_InitStruct.NVIC_IRQChannelCmd = (FunctionalState)ENABLE;
     NVIC_InitStruct.NVIC_IRQChannelPriority = 3;
@@ -798,20 +822,17 @@ otError otPlatUartDisable(void)
 
 void uart_send(const uint8_t *aBuf, uint16_t aBufLength)
 {
-    os_mutex_take(uart_tx_mutex, 0xffffffff);
     GDMA_SetSourceAddress(UART_TX_GDMA_CHANNEL, (uint32_t)aBuf);
     GDMA_SetDestinationAddress(UART_TX_GDMA_CHANNEL, (uint32_t) & (OT_UART->UART_RBR_THR));
     GDMA_SetBufferSize(UART_TX_GDMA_CHANNEL, aBufLength);
     GDMA_Cmd(UART_TX_GDMA_CHANNEL_NUM, ENABLE);
     os_sem_take(uart_tx_sem, 0xffffffff);
-    os_mutex_give(uart_tx_mutex);
 }
 
 otError otPlatUartSend(const uint8_t *aBuf, uint16_t aBufLength)
 {
     uart_send(aBuf, aBufLength);
-    sTransmitDone = true;
-    otTaskletsSignalPending(NULL);
+    otPlatUartSendDone();
     return OT_ERROR_NONE;
 }
 
@@ -852,19 +873,13 @@ void BEE_UartRx(void)
 #else // (ENABLE_PW_RPC == 1)
 void BEE_UartTx(void)
 {
-    if (sTransmitDone)
-    {
-        sTransmitDone = false;
-        otPlatUartSendDone();
-    }
 }
 
 void BEE_UartRx(void)
 {
-    uint16_t tail;
-    do
+    uint16_t tail = curr_rx_tail;
+    if (rx_head != tail)
     {
-        tail = rx_tail;
         if (rx_head > tail)
         {
             otPlatUartReceived(&rx_buffer[rx_head], kReceiveBufferSize - rx_head);
@@ -877,23 +892,22 @@ void BEE_UartRx(void)
             rx_head = tail;
         }
     }
-    while (0);
 }
 #endif // (ENABLE_PW_RPC == 1)
 
-void UART_TX_GDMA_Handler(void)
+APP_RAM_TEXT_SECTION void UART_TX_GDMA_Handler(void)
 {
     GDMA_ClearINTPendingBit(UART_TX_GDMA_CHANNEL_NUM, GDMA_INT_Transfer);
     os_sem_give(uart_tx_sem);
 }
 
-void OT_UARTIntHandler(void)
+APP_RAM_TEXT_SECTION void OT_UARTIntHandler(void)
 {
     uint32_t int_status = UART_GetIID(OT_UART);
     uint16_t len;
 
     UART_INTConfig(OT_UART, UART_INT_RD_AVA, DISABLE);
-#if 0
+#if 1
     if (UART_GetFlagStatus(OT_UART, UART_FLAG_RX_IDLE))
     {
         UART_INTConfig(OT_UART, UART_INT_RX_IDLE, DISABLE);
@@ -904,6 +918,11 @@ void OT_UARTIntHandler(void)
             rx_tail = (rx_tail + 1) % kReceiveBufferSize;
         }
         UART_INTConfig(OT_UART, UART_INT_RX_IDLE, ENABLE);
+#if (ENABLE_PW_RPC != 1)
+        curr_rx_tail = rx_tail;
+        BEE_EventSend(UART_RX, 0);
+        otSysEventSignalPending();
+#endif
     }
 #endif
     switch (int_status & 0x0E)
@@ -916,9 +935,6 @@ void OT_UARTIntHandler(void)
             rx_buffer[rx_tail] = OT_UART->UART_RBR_THR;
             rx_tail = (rx_tail + 1) % kReceiveBufferSize;
         }
-#if (ENABLE_PW_RPC != 1)
-        otSysEventSignalPending();
-#endif
         break;
 
     default:

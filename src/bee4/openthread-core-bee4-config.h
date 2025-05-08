@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, The OpenThread Authors.
+ *  Copyright (c) 2025, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -37,13 +37,15 @@
 /**
  * @def OPENTHREAD_CONFIG_NUM_MESSAGE_BUFFERS
  *
- * The number of message buffers in the buffer pool.
- *
  */
 #ifndef OPENTHREAD_CONFIG_NUM_MESSAGE_BUFFERS
 #define OPENTHREAD_CONFIG_NUM_MESSAGE_BUFFERS 160
 #endif
 
+/**
+ * @def OPENTHREAD_CONFIG_LOG_LEVEL
+ *
+ */
 #ifndef OPENTHREAD_CONFIG_LOG_LEVEL
 #define OPENTHREAD_CONFIG_LOG_LEVEL OT_LOG_LEVEL_NOTE
 #endif

@@ -27,7 +27,7 @@
 #  POSSIBILITY OF SUCH DAMAGE.
 #
 
-PROJECT_CONFIG=${BEE_MATTER}/examples/$2/realtek_bee/main/include/CHIPProjectConfig.h
+PROJECT_CONFIG=${MATTER_EXAMPLE_PATH}/main/include/CHIPProjectConfig.h
 VENDOR_ID=$(awk '/#define CHIP_DEVICE_CONFIG_DEVICE_VENDOR_ID/{print $3}' ${PROJECT_CONFIG})
 PRODUCT_ID=$(awk '/#define CHIP_DEVICE_CONFIG_DEVICE_PRODUCT_ID/{print $3}' ${PROJECT_CONFIG})
 VERSION=$(awk '/#define CHIP_DEVICE_CONFIG_DEVICE_SOFTWARE_VERSION/{print $3; exit}' ${PROJECT_CONFIG})
@@ -41,22 +41,22 @@ echo "VERSION_STR=${VERSION_STR}"
 chmod +x ${OT_SRCDIR}/tools/FlashMapGenerateCli
 chmod +x ${OT_SRCDIR}/tools/PackCli
 
-if [ $1 == "evb_dual" ] || [ $1 == "rtl8777g_dual" ]; then
-    cp -f ${OT_SRCDIR}/src/bee4/$1/*.ini ${OUT_FOLDER}/ota/
-    cp -f ${OT_SRCDIR}/src/bee4/$1/firmware/bank0/* ${OUT_FOLDER}/ota/
-    cp -f ${OT_SRCDIR}/src/bee4/$1/firmware/bank1/* ${OUT_FOLDER}/ota/
-    cp -f build/bin/*MP_dev*.bin ${OUT_FOLDER}/ota/
+if [[ $1 == *"dual"* ]]; then  
+    cp -f ${OT_SRCDIR}/vendor/bee4/$1/*.ini ${OTA_FOLDER}
+    cp -f ${OT_SRCDIR}/vendor/bee4/${1%/secure}/firmware/bank0/* ${OTA_FOLDER}
+    cp -f ${OT_SRCDIR}/vendor/bee4/${1%/secure}/firmware/bank1/* ${OTA_FOLDER}
+    cp -f ${OUT_FOLDER}/bin/*MP_dev*.bin ${OTA_FOLDER}
 
-    ${OT_SRCDIR}/tools/FlashMapGenerateCli ${OUT_FOLDER}/ota $3 ${OUT_FOLDER}/ota
+    ${OT_SRCDIR}/tools/FlashMapGenerateCli ${OTA_FOLDER} $2 ${OTA_FOLDER}
 else
-    cp -f ${OT_SRCDIR}/src/bee4/$1/*.ini ${OUT_FOLDER}/ota/
-    cp -f ${OUT_FOLDER}/bin/*MP_dev*.bin ${OUT_FOLDER}/ota/
+    cp -f ${OT_SRCDIR}/vendor/bee4/$1/*.ini  ${OTA_FOLDER}
+    cp -f ${OUT_FOLDER}/bin/*MP_dev*.bin  ${OTA_FOLDER}
 fi
 
-rm -rf ${OUT_FOLDER}/ota/*.ota
-${OT_SRCDIR}/tools/PackCli 8772gwp ota ${OUT_FOLDER}/ota ${OUT_FOLDER}
+rm -rf  ${OTA_FOLDER}/*.ota
+${OT_SRCDIR}/tools/PackCli 8772gwp ota  ${OTA_FOLDER}  ${OTA_FOLDER}/..
 
-${BEE_MATTER}/src/app/ota_image_tool.py create -v ${VENDOR_ID} -p ${PRODUCT_ID} -vn ${VERSION} -vs ${VERSION_STR} -da sha256 ${OUT_FOLDER}/ota/ImgPacketFile*.bin ${OUT_FOLDER}/ota/matter.ota
+${OT_SRCDIR}/../matter/connectedhomeip/src/app/ota_image_tool.py create -v ${VENDOR_ID} -p ${PRODUCT_ID} -vn ${VERSION} -vs ${VERSION_STR} -da sha256 ${OTA_FOLDER}/ImgPacketFile*.bin ${OTA_FOLDER}/matter.ota
 
-rm -rf ${OUT_FOLDER}/ota/*.bin
-rm -rf ${OUT_FOLDER}/ota/*.ini
+rm -rf  ${OTA_FOLDER}/*.bin
+rm -rf  ${OTA_FOLDER}/*.ini

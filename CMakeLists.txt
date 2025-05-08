@@ -1,5 +1,5 @@
 #
-#  Copyright (c) 2020, The OpenThread Authors.
+#  Copyright (c) 2025, The OpenThread Authors.
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -27,53 +27,24 @@
 #
 
 cmake_minimum_required(VERSION 3.10.2)
-project(ot-bee VERSION 0.2.0 LANGUAGES C CXX ASM)
+project(ot-realtek VERSION 0.2.0 LANGUAGES C CXX ASM)
 
 if(${OT_CMAKE_NINJA_TARGET} STREQUAL "matter-cli-ftd" OR ${OT_CMAKE_NINJA_TARGET} STREQUAL "matter-cli-mtd")
-set(OT_EXTERNAL_MBEDTLS "bee4-mbedtls" CACHE STRING "")
 
-if(${BUILD_TARGET} STREQUAL "rtl8777g")
+string(FIND "${BUILD_TARGET}" "rtl8777g" FOUND_INDEX)
+if(NOT FOUND_INDEX EQUAL -1)
 set(RT_PLATFORM "bee4" CACHE STRING "")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DBOARD_RTL8777G")
 endif()
 
-set(bee_matter_root "${MATTER_EXAMPLE_PATH}/../../..")
-
-set(ENV{MATTER_ENABLE_MED} 0)
-set(matter_enable_factory_data 0)
-if(matter_enable_factory_data GREATER 0)
-    set(matter_enable_factory_data 1)
-    set(matter_dac_key_encryption 1)
-endif()
-set (matter_enable_persistentstorage_audit 0)
-set (matter_enable_ota_requestor 0)
-set (matter_enable_ble_ota 0)
-
-if(${ENABLE_PW_RPC} STREQUAL "ON")
-    set (matter_enable_rpc 1)
-else()
-    set (matter_enable_rpc 0)
-endif()
-
-if(${ENABLE_CLI} STREQUAL "ON")
-    set(matter_enable_otcli 1)
-else()
-    set(matter_enable_otcli 0)
-endif()
-
-if(${ENABLE_SHELL} STREQUAL "ON")
-    set(matter_enable_shell 1)
-else()
-    set(matter_enable_shell 0)
-endif()
+set(LD_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/${RT_PLATFORM}/${BUILD_TARGET}/app.ld.gen")
 
 endif()
+
+include(script/${BUILD_TYPE}.cmake)
 
 set(RT_PLATFORM_VALUES
     "bee4"
-    "bee3plus"
-    "rtl8852d"
-    "rtl8922d"
-    "bb2ultra"
 )
 set_property(CACHE RT_PLATFORM PROPERTY STRINGS ${RT_PLATFORM_VALUES})
 if(NOT RT_PLATFORM IN_LIST RT_PLATFORM_VALUES)
@@ -81,12 +52,38 @@ if(NOT RT_PLATFORM IN_LIST RT_PLATFORM_VALUES)
 endif()
 
 # OpenThread config
-if(${RT_PLATFORM} STREQUAL "bee3plus" AND ${OT_CMAKE_NINJA_TARGET} STREQUAL "ot-cli-mtd")
+if(${OT_CMAKE_NINJA_TARGET} STREQUAL "matter-cli-ftd" OR ${OT_CMAKE_NINJA_TARGET} STREQUAL "matter-cli-mtd")
 set(OT_PLATFORM "external" CACHE STRING "")
 set(OT_SLAAC ON CACHE BOOL "")
+set(OT_BORDER_AGENT OFF CACHE BOOL "")
+set(OT_BORDER_ROUTER OFF CACHE BOOL "")
+set(OT_COMMISSIONER OFF CACHE BOOL "")
+set(OT_JOINER ON CACHE BOOL "")
+set(OT_DNS_CLIENT ON CACHE BOOL "")
+set(OT_DHCP6_SERVER OFF CACHE BOOL "")
+set(OT_DHCP6_CLIENT ON CACHE BOOL "")
+set(OT_COAP ON CACHE BOOL "")
+set(OT_COAPS ON CACHE BOOL "")
+set(OT_COAP_OBSERVE OFF CACHE BOOL "")
+set(OT_LINK_RAW OFF CACHE BOOL "")
+set(OT_MAC_FILTER ON CACHE BOOL "")
+set(OT_SERVICE ON CACHE BOOL "")
+set(OT_UDP_FORWARD OFF CACHE BOOL "")
+set(OT_ECDSA ON CACHE BOOL "")
+set(OT_SNTP_CLIENT OFF CACHE BOOL "")
+set(OT_CHILD_SUPERVISION ON CACHE BOOL "")
+set(OT_JAM_DETECTION OFF CACHE BOOL "")
 set(OT_LOG_LEVEL_DYNAMIC ON CACHE BOOL "")
+set(OT_EXTERNAL_HEAP ON CACHE BOOL "")
+set(OT_SRP_CLIENT ON CACHE BOOL "")
+set(OT_DUA ON CACHE BOOL "")
+set(OT_BACKBONE_ROUTER OFF CACHE BOOL "")
+set(OT_MLR ON CACHE BOOL "")
 set(OT_CSL_RECEIVER ON CACHE BOOL "")
+set(OT_LINK_METRICS_INITIATOR OFF CACHE BOOL "")
+set(OT_LINK_METRICS_SUBJECT ON CACHE BOOL "")
 set(OT_CHANNEL_MONITOR OFF CACHE BOOL "")
+set(OT_CHANNEL_MANAGER OFF CACHE BOOL "")
 else()
 set(OT_PLATFORM "external" CACHE STRING "")
 set(OT_SLAAC ON CACHE BOOL "")
@@ -118,6 +115,7 @@ set(OT_CSL_RECEIVER ON CACHE BOOL "")
 set(OT_LINK_METRICS_INITIATOR ON CACHE BOOL "")
 set(OT_LINK_METRICS_SUBJECT ON CACHE BOOL "")
 set(OT_CHANNEL_MONITOR OFF CACHE BOOL "")
+set(OT_CHANNEL_MANAGER OFF CACHE BOOL "")
 endif()
 
 set(OT_PLATFORM_LIB "openthread-${RT_PLATFORM}")
@@ -127,7 +125,6 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
 
 add_subdirectory(openthread)
-include(script/${BUILD_TYPE}.cmake)
 
 target_compile_definitions(ot-config INTERFACE
     OPENTHREAD_CONFIG_FILE="openthread-core-${RT_PLATFORM}-config.h"
@@ -151,30 +148,3 @@ target_include_directories(ot-config INTERFACE
 )
 
 add_subdirectory(src/${RT_PLATFORM})
-if(${OT_CMAKE_NINJA_TARGET} STREQUAL "matter-cli-ftd" OR ${OT_CMAKE_NINJA_TARGET} STREQUAL "matter-cli-mtd")
-set (matter_output_path ${PROJECT_BINARY_DIR})
-set (matter_example_path ${MATTER_EXAMPLE_PATH})
-get_filename_component(SDK_ROOT ${REALTEK_SDK_ROOT} REALPATH)
-get_filename_component(CHIP_ROOT ${bee_matter_root} REALPATH)
-
-if(${OT_CMAKE_NINJA_TARGET} STREQUAL "matter-cli-ftd")
-set (matter_enable_ftd 1)
-endif()
-
-if(${OT_CMAKE_NINJA_TARGET} STREQUAL "matter-cli-mtd")
-set (matter_enable_mtd 1)
-set (matter_enable_med $ENV{MATTER_ENABLE_MED})
-endif()
-
-set (openthread_root "${CMAKE_CURRENT_SOURCE_DIR}/openthread")
-
-set(bee_lwip_path ${REALTEK_SDK_ROOT}/subsys/lwip/for_matter)
-include(${bee_lwip_path}/lwip.cmake)
-
-include(includepath.cmake)
-include(${CHIP_ROOT}/src/app/chip_data_model.cmake)
-include(${matter_example_path}/chip_main.cmake)
-include(${CHIP_ROOT}/config/realtek_bee/chip.cmake)
-
-add_dependencies(chip_main chip-gn)
-endif()

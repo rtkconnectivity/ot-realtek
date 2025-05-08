@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2016, The OpenThread Authors.
+ *  Copyright (c) 2025, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -63,6 +63,27 @@
 #include "wdt.h"
 #include "dbg_printf.h"
 #include "rtl876x_lib_platform.h"
+#include "app_section.h"
+
+#if (BUILD_RCP == 1)
+#define RX_BUF_SIZE     16
+#define EV_BUF_SIZE     16
+#else
+#define RX_BUF_SIZE     8
+#define EV_BUF_SIZE     8
+#endif
+
+#define NONE		0
+#define RX_OK		1
+#define TX_DONE		2
+#define ED_SCAN		3
+#define UART_RX		4
+#define UART_TX		5
+#define ALARM_US	6
+#define ALARM_MS	7
+#define SLEEP		8
+
+void BEE_EventSend(uint8_t event, uint8_t pan_idx);
 
 /**
  * This function initializes the alarm service used by OpenThread.
@@ -76,7 +97,8 @@ void BEE_AlarmInit(void);
  * @param[in]  aInstance  The OpenThread instance structure.
  *
  */
-void BEE_AlarmProcess(otInstance *aInstance, uint8_t pan_idx);
+void BEE_AlarmMicroProcess(otInstance *aInstance, uint8_t pan_idx);
+void BEE_AlarmMilliProcess(otInstance *aInstance, uint8_t pan_idx);
 
 /**
  * This function initializes the radio service used by OpenThread.
@@ -90,9 +112,12 @@ void BEE_RadioInit(uint8_t pan_idx);
  * @param[in]  aInstance  The OpenThread instance structure.
  *
  */
-void BEE_EventProcess(otInstance *aInstance, uint8_t pan_idx);
+void BEE_RadioRx(otInstance *aInstance, uint8_t pan_idx);
+void BEE_RadioTx(otInstance *aInstance, uint8_t pan_idx);
+void BEE_RadioEnergyScan(otInstance *aInstance, uint8_t pan_idx);
 void BEE_SleepProcess(otInstance *aInstance, uint8_t pan_idx);
-void BEE_SleepDone(uint8_t pan_idx);
+void BEE_WakeupProcess(otInstance *aInstance, uint8_t pan_idx);
+
 /**
  * This function initializes the random number service used by OpenThread.
  *
@@ -139,6 +164,7 @@ typedef int64_t s64_t;
  * @param[in]   duration  The timer duration.
  *
  */
+extern volatile uint64_t bt_clk_offset;
 void milli_handler(uint8_t pan_idx);
 void micro_handler(uint8_t pan_idx);
 
@@ -147,17 +173,19 @@ extern bool_t mac_GrantPHYStatus(void);
 extern void mac_GrantPHYAdjustForBLE(void);
 extern void mac_GrantPHYAdjustForZB(void);
 extern void mac_SetAddrMatchMode_patch(uint8_t mode);
-extern void mac_SetTxNCsma(bool enable);
+extern void mac_SetTxNCsmaDetail(bool enable, uint8_t be);
 extern uint8_t mac_LoadTxNPayload_patch(uint8_t HdrL, uint8_t FrmL, uint8_t *TxFIFO);
 extern void mac_TrigUpperEnc_patch(void);
-extern uint8_t mac_TrigTxN_patch(bool_t AckReq, bool_t SecReq, bool_t Is2015);
-extern uint32_t mac_BackoffDelay(void);
+extern uint8_t mpan_TrigTxNAtTime_patch(bool_t AckReq, bool_t SecReq, bool_t DoCCA, uint32_t target_us, uint8_t pan_idx);
+extern uint32_t mac_BackoffDelay(uint8_t nb);
+extern void mac_GivenTimeDelay(uint64_t target_us);
 extern uint8_t mac_TrigTxEnhAck_patch(bool_t early, bool_t SecReq);
 
 typedef void (*bt_hci_reset_handler_t)(void);
 extern void mac_RegisterBtHciResetHanlder(bt_hci_reset_handler_t handler);
 
 extern int8_t mac_SetTXPower_patch(int8_t tx_dbm);
+extern int8_t mac_GetTXPower_patch(void);
 extern void mac_EDScan_begin(uint32_t scan_round);
 extern void mac_EDScan_end(uint8_t *peak_value);
 extern bool mac_GetTxNTermedStatus(void);
@@ -166,6 +194,7 @@ extern void mac_PTA_Wrokaround(void);
 int8_t mac_edscan_level2dbm(uint8_t level);
 uint8_t mac_edscan_dbm2level(int8_t dbm);
 uint8_t mac_GetCcaEDThreshold_patch(void);
+uint8_t mac_GetCurrentCCAReport(void);
 
 void zbSysInit(int argc, char *argv[]);
 bool zbSysPseudoResetWasRequested(void);

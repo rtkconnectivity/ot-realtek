@@ -47,6 +47,7 @@
 #include "rtl_nvic.h"
 #include "zb_tst_cfg.h"
 #include "dbg_printf.h"
+#include "mem_config.h"
 
 /** @addtogroup  MAC_TASK_DEMO
     * @{
@@ -148,6 +149,9 @@ extern void ChipTest(void);
 
 void matter_test_task(void *p_param)
 {
+#if defined(FEATURE_TRUSTZONE_ENABLE) && (FEATURE_TRUSTZONE_ENABLE == 1)
+    os_alloc_secure_ctx(1024);
+#endif
     DBG_DIRECT("%s", __func__);
     mbedtls_threading_set_alt(bee_mutex_init, bee_mutex_free, bee_mutex_lock, bee_mutex_unlock);
     uart_init_internal();

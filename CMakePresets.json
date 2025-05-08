@@ -1,0 +1,154 @@
+{
+    "version": 3,
+    "cmakeMinimumRequired": {
+      "major": 3, "minor": 19, "patch": 0
+    },
+    "configurePresets": [
+      {
+        "name": "default",
+        "description": "Matter default configuration",
+        "hidden": false,
+        "generator": "Ninja",
+        "toolchainFile": "vendor/bee4/arm-none-eabi.cmake",
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Release",
+          "BUILD_TYPE": "dev",
+          "OT_COMPILE_WARNING_AS_ERROR": "ON",
+          "BUILD_USB": "OFF",
+          "ENABLE_PERSISTENTSTORAGE_AUDIT": "OFF",
+          "ENABLE_MATTER_MED": "OFF",
+          "ENABLE_FACTORY_DATA": "OFF",
+          "ENABLE_FACTORY_DATA_ENCRYPTION": "OFF",
+          "ENABLE_DAC_KEY_ENCRYPTION": "OFF",
+          "ENABLE_CLI": "ON",
+          "ENABLE_PW_RPC": "OFF",
+          "ENABLE_SHELL": "ON",
+          "ENABLE_BLE_OTA": "OFF",
+          "ENABLE_OTA_REQUESTOR": "ON",
+          "ENABLE_DLPS": "ON"
+        }
+      },
+      {
+        "name": "secure",
+        "description": "Matter single security configuration",
+        "hidden": false,
+        "generator": "Ninja",
+        "toolchainFile": "vendor/bee4/arm-none-eabi.cmake",
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Release",
+          "BUILD_TYPE": "sdk",
+          "OT_COMPILE_WARNING_AS_ERROR": "ON",
+          "BUILD_USB": "OFF",
+          "ENABLE_PERSISTENTSTORAGE_AUDIT": "OFF",
+          "ENABLE_MATTER_MED": "OFF",
+          "ENABLE_FACTORY_DATA": "OFF",
+          "ENABLE_FACTORY_DATA_ENCRYPTION": "OFF",
+          "ENABLE_DAC_KEY_ENCRYPTION": "OFF",
+          "ENABLE_CLI": "OFF",
+          "ENABLE_PW_RPC": "OFF",
+          "ENABLE_SHELL": "OFF",
+          "ENABLE_BLE_OTA": "OFF",
+          "ENABLE_OTA_REQUESTOR": "ON",
+          "ENABLE_DLPS": "OFF"
+        }
+      },
+      {
+        "name": "rpc",
+        "description": "Matter configuration with rpc enabled",
+        "hidden": false,
+        "generator": "Ninja",
+        "toolchainFile": "vendor/bee4/arm-none-eabi.cmake",
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Release",
+          "BUILD_TYPE": "sdk",
+          "OT_COMPILE_WARNING_AS_ERROR": "ON",
+          "BUILD_USB": "OFF",
+          "ENABLE_PERSISTENTSTORAGE_AUDIT": "OFF",
+          "ENABLE_MATTER_MED": "OFF",
+          "ENABLE_FACTORY_DATA": "OFF",
+          "ENABLE_FACTORY_DATA_ENCRYPTION": "OFF",
+          "ENABLE_DAC_KEY_ENCRYPTION": "OFF",
+          "ENABLE_CLI": "ON",
+          "ENABLE_PW_RPC": "ON",
+          "ENABLE_SHELL": "OFF",
+          "ENABLE_BLE_OTA": "OFF",
+          "ENABLE_OTA_REQUESTOR": "OFF",
+          "ENABLE_DLPS": "OFF"
+        }
+      },
+      {
+        "name": "dual",
+        "description": "Matter dual bank configuration",
+        "hidden": false,
+        "generator": "Ninja",
+        "toolchainFile": "vendor/bee4/arm-none-eabi.cmake",
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Release",
+          "BUILD_TYPE": "sdk",
+          "OT_COMPILE_WARNING_AS_ERROR": "ON",
+          "BUILD_USB": "OFF",
+          "ENABLE_PERSISTENTSTORAGE_AUDIT": "OFF",
+          "ENABLE_MATTER_MED": "OFF",
+          "ENABLE_FACTORY_DATA": "OFF",
+          "ENABLE_FACTORY_DATA_ENCRYPTION": "OFF",
+          "ENABLE_DAC_KEY_ENCRYPTION": "OFF",
+          "ENABLE_CLI": "OFF",
+          "ENABLE_PW_RPC": "OFF",
+          "ENABLE_SHELL": "OFF",
+          "ENABLE_BLE_OTA": "OFF",
+          "ENABLE_OTA_REQUESTOR": "ON",
+          "OTA_VERSION": "1.0.0.2",
+          "ENABLE_DLPS": "ON"
+        }
+      },
+      {
+        "name": "dual_secure",
+        "description": "Matter dual security configuration",
+        "hidden": false,
+        "generator": "Ninja",
+        "toolchainFile": "vendor/bee4/arm-none-eabi.cmake",
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Release",
+          "BUILD_TYPE": "sdk",
+          "OT_COMPILE_WARNING_AS_ERROR": "ON",
+          "BUILD_USB": "OFF",
+          "ENABLE_PERSISTENTSTORAGE_AUDIT": "OFF",
+          "ENABLE_MATTER_MED": "OFF",
+          "ENABLE_FACTORY_DATA": "OFF",
+          "ENABLE_FACTORY_DATA_ENCRYPTION": "OFF",
+          "ENABLE_DAC_KEY_ENCRYPTION": "OFF",
+          "ENABLE_CLI": "OFF",
+          "ENABLE_PW_RPC": "OFF",
+          "ENABLE_SHELL": "OFF",
+          "ENABLE_BLE_OTA": "OFF",
+          "ENABLE_OTA_REQUESTOR": "ON",
+          "OTA_VERSION": "1.0.0.2",
+          "ENABLE_DLPS": "ON"
+        }
+      },
+      {
+        "name": "2m",
+        "description": "Matter 2M flash configuration",
+        "hidden": false,
+        "generator": "Ninja",
+        "toolchainFile": "vendor/bee4/arm-none-eabi.cmake",
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Release",
+          "BUILD_TYPE": "sdk",
+          "OT_COMPILE_WARNING_AS_ERROR": "ON",
+          "BUILD_USB": "OFF",
+          "ENABLE_PERSISTENTSTORAGE_AUDIT": "OFF",
+          "ENABLE_MATTER_MED": "OFF",
+          "ENABLE_FACTORY_DATA": "OFF",
+          "ENABLE_FACTORY_DATA_ENCRYPTION": "OFF",
+          "ENABLE_DAC_KEY_ENCRYPTION": "OFF",
+          "ENABLE_CLI": "OFF",
+          "ENABLE_PW_RPC": "OFF",
+          "ENABLE_SHELL": "OFF",
+          "ENABLE_BLE_OTA": "OFF",
+          "ENABLE_OTA_REQUESTOR": "OFF",
+          "ENABLE_DLPS": "ON"
+        }
+      }
+    ]
+}

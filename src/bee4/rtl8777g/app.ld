@@ -1,30 +1,3 @@
-/*
- *  Copyright (c) 2025, The OpenThread Authors.
- *  All rights reserved.
- *
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are met:
- *  1. Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *  2. Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *  3. Neither the name of the copyright holder nor the
- *     names of its contributors may be used to endorse or promote products
- *     derived from this software without specific prior written permission.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- *  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- *  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- *  ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- *  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- *  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- *  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- *  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- *  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- *  POSSIBILITY OF SUCH DAMAGE.
- */
 #include "mem_config.h"
 #include "flash_map.h"
 
@@ -74,9 +47,9 @@ SECTIONS
     {
         __flash_text_start__ = .;
         *(.image_entry)
-        *(EXCLUDE_FILE (*libbee4-internal.a:*.obj *libopenthread-bee4.a:*alarm.c.obj *libopenthread-bee4.a:*entropy.c.obj *libopenthread-bee4.a:*flash.c.obj *libopenthread-bee4.a:*logging.c.obj *libopenthread-bee4.a:*misc.c.obj *libopenthread-bee4.a:*radio.c.obj *libopenthread-bee4.a:*system.c.obj *libopenthread-bee4.a:*uart.c.obj *libopenthread-bee4.a:*rtl_rcc.c.obj *libopenthread-bee4.a:*rtl_nvic.c.obj *libopenthread-bee4.a:*rtl_uart.c.obj *libopenthread-bee4.a:*rtl_gdma.c.obj *libopenthread-bee4.a:*mac_frame.cpp.obj *libopenthread-bee4.a:*link_metrics.cpp.obj *libopenthread-bee4.a:*mac_frame_add.cpp.obj *libopenthread-bee4.a:*kvmgr.c.obj *libosif*.a:*.o *ext_osif.a:*.o *libmac*.a:*.o *libcommon*.a:*.o ) .text*)
+        *(EXCLUDE_FILE (*librtl87x2g_sdk.a:*log_retarget.o *libbee4-internal.a:*.obj *libopenthread-bee4.a:*.obj) .text*)
         . = ALIGN(4);
-        *(EXCLUDE_FILE (*libbee4-internal.a:*.obj *libopenthread-bee4.a:*alarm.c.obj *libopenthread-bee4.a:*entropy.c.obj *libopenthread-bee4.a:*flash.c.obj *libopenthread-bee4.a:*logging.c.obj *libopenthread-bee4.a:*misc.c.obj *libopenthread-bee4.a:*radio.c.obj *libopenthread-bee4.a:*system.c.obj *libopenthread-bee4.a:*uart.c.obj *libopenthread-bee4.a:*rtl_rcc.c.obj *libopenthread-bee4.a:*rtl_nvic.c.obj *libopenthread-bee4.a:*rtl_uart.c.obj *libopenthread-bee4.a:*rtl_gdma.c.obj *libopenthread-bee4.a:*mac_frame.cpp.obj *libopenthread-bee4.a:*link_metrics.cpp.obj *libopenthread-bee4.a:*mac_frame_add.cpp.obj *libopenthread-bee4.a:*kvmgr.c.obj *libosif*.a:*.o *ext_osif.a:*.o *libmac*.a:*.o *libcommon*.a:*.o ) .rodata*)
+        *(EXCLUDE_FILE (*librtl87x2g_sdk.a:*log_retarget.o *libbee4-internal.a:*.obj *libopenthread-bee4.a:*.obj) .rodata*)
         . = ALIGN(4);
         * (.isr.text)
         * (.app.flash.text)
@@ -143,27 +116,9 @@ SECTIONS
        . = ALIGN(0x20);
         __enter_iram_ns_ro_start__ = .;
         * (.app.ram.text)
-         *libbee4-internal.a:*.obj (.text* .rodata*)
-        *libopenthread-bee4.a:*alarm.c.obj (.text* .rodata*)
-        *libopenthread-bee4.a:*entropy.c.obj (.text* .rodata*)
-        *libopenthread-bee4.a:*flash.c.obj (.text* .rodata*)
-        *libopenthread-bee4.a:*logging.c.obj (.text* .rodata*)
-        *libopenthread-bee4.a:*misc.c.obj (.text* .rodata*)
-        *libopenthread-bee4.a:*radio.c.obj (.text* .rodata*)
-        *libopenthread-bee4.a:*system.c.obj (.text* .rodata*)
-        *libopenthread-bee4.a:*uart.c.obj (.text* .rodata*)
-        *libopenthread-bee4.a:*rtl_rcc.c.obj (.text* .rodata*)
-        *libopenthread-bee4.a:*rtl_nvic.c.obj (.text* .rodata*)
-        *libopenthread-bee4.a:*rtl_uart.c.obj (.text* .rodata*)
-        *libopenthread-bee4.a:*rtl_gdma.c.obj (.text* .rodata*)
-        *libopenthread-bee4.a:*mac_frame.cpp.obj (.text* .rodata*)
-        *libopenthread-bee4.a:*link_metrics.cpp.obj (.text* .rodata*)
-        *libopenthread-bee4.a:*mac_frame_add.cpp.obj (.text* .rodata*)
-        *libopenthread-bee4.a:*kvmgr.c.obj (.text* .rodata*)
-        *libosif*.a:*.o (.text* .rodata*)
-        *ext_osif.a:*.o (.text* .rodata*)
-        *libmac*.a:*.o (.text* .rodata*)
-        *libcommon*.a:*.o (.text* .rodata*)
+        *librtl87x2g_sdk.a:*log_retarget.o (.text* .rodata*)
+        *libbee4-internal.a:*.obj (.text* .rodata*)
+        *libopenthread-bee4.a:*.obj (.text* .rodata*)
         __enter_iram_ns_ro_end__ = .;
         __enter_iram_ns_rw_start__ = .;
         *(.data*)

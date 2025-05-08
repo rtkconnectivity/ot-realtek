@@ -162,5 +162,5 @@ extern bool rtk_enable_flow_control(const uint8_t *data, uint8_t data_len);
 
 #endif /*__VENDOR_HOOK_H*/
 
-/******************* (C) COPYRIGHT 2025 Realtek Semiconductor Corporation *****END OF FILE****/
+/******************* (C) COPYRIGHT 2024 Realtek Semiconductor Corporation *****END OF FILE****/
 

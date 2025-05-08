@@ -49,7 +49,7 @@ extern "C" {
 #include "zb_tst_cfg.h"
 #endif
 
-#if(1 == BUILD_RCP)
+#if(1 == BUILD_RCP || 1 == MATTER_ENABLE_CFU)
 /*******************************************************
 *                 CFU Config
 *******************************************************/
@@ -130,8 +130,8 @@ extern "C" {
 /* if use any peripherals below, #define it 1 */
 #define USE_ADC_DLPS         0
 #define USE_ENHTIM_DLPS      0
-#define USE_GPIOA_DLPS       0
-#define USE_GPIOB_DLPS       0
+#define USE_GPIOA_DLPS       1
+#define USE_GPIOB_DLPS       1
 #define USE_I2C0_DLPS        0
 #define USE_I2C1_DLPS        0
 #define USE_I2C2_DLPS        0

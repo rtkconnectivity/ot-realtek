@@ -25,10 +25,6 @@
 #  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #  POSSIBILITY OF SUCH DAMAGE.
 #
-if(${RT_PLATFORM} STREQUAL "rtl8852d")
-    include(${PROJECT_SOURCE_DIR}/cmake/fetch_openthread.cmake)
-endif()
-
 if(${RT_PLATFORM} STREQUAL "bee4")
 set(REALTEK_SDK_ROOT
     ${PROJECT_SOURCE_DIR}/third_party/Realtek/rtl87x2g_sdk
@@ -56,59 +52,5 @@ set(REALTEK_SDK_INCPATH
     ${REALTEK_SDK_ROOT}/bsp/sdk_lib/inc
     ${REALTEK_SDK_ROOT}/bsp/sdk_lib/inc_int
     ${REALTEK_SDK_ROOT}/bsp/power
-)
-endif()
-
-if(${RT_PLATFORM} STREQUAL "bee3plus")
-set(REALTEK_SDK_ROOT
-    ${PROJECT_SOURCE_DIR}/../../../
-)
-set(REALTEK_SDK_INCPATH
-    ${REALTEK_SDK_ROOT}/sdk/inc/platform
-)
-endif()
-
-if(${RT_PLATFORM} STREQUAL "bb2ultra")
-set(REALTEK_SDK_ROOT
-    ${PROJECT_SOURCE_DIR}/../HoneyComb_crb14
-)
-set(REALTEK_SDK_INCPATH
-    ${REALTEK_SDK_ROOT}/sdk/inc/app
-    ${REALTEK_SDK_ROOT}/sdk/inc/os
-    ${REALTEK_SDK_ROOT}/sdk/inc/rtl87x3eu/io
-    ${REALTEK_SDK_ROOT}/sdk/inc/stack
-    ${REALTEK_SDK_ROOT}/sdk/inc/rtl87x3eu/platform/cmsis
-    ${REALTEK_SDK_ROOT}/sdk/inc/rtl87x3eu/platform
-    ${REALTEK_SDK_ROOT}/sdk/inc/framework
-    ${REALTEK_SDK_ROOT}/sdk/inc/framework/system
-    ${REALTEK_SDK_ROOT}/sdk/inc/framework/audio
-    ${REALTEK_SDK_ROOT}/sdk/inc/framework/bt
-    ${REALTEK_SDK_ROOT}/sdk/inc/framework/remote
-    ${REALTEK_SDK_ROOT}/sdk/inc/framework/console
-    ${REALTEK_SDK_ROOT}/sdk/inc/rtl87x3eu/hal
-    ${REALTEK_SDK_ROOT}/sdk/inc/bluetooth/gap/gap_lib
-    ${REALTEK_SDK_ROOT}/sdk/inc/bluetooth/gap
-    ${REALTEK_SDK_ROOT}/sdk/inc/bluetooth/leaudio
-    ${REALTEK_SDK_ROOT}/sdk/inc/bluetooth/profile
-    ${REALTEK_SDK_ROOT}/sdk/inc/bluetooth/profile/server
-    ${REALTEK_SDK_ROOT}/sdk/inc/bluetooth/profile/client
-    ${REALTEK_SDK_ROOT}/sdk/inc/service
-    ${REALTEK_SDK_ROOT}/sdk/inc/service/gfps
-    ${REALTEK_SDK_ROOT}/sdk/inc/service/bisto
-    ${REALTEK_SDK_ROOT}/sdk/inc/service/xiaoai
-    ${REALTEK_SDK_ROOT}/sdk/inc/service/xiaowei
-    ${REALTEK_SDK_ROOT}/sdk/inc/service/ama
-    ${REALTEK_SDK_ROOT}/sdk/inc/service/teams
-    ${REALTEK_SDK_ROOT}/sdk/inc/service/teams/asp_service
-    ${REALTEK_SDK_ROOT}/sdk/inc/service/teams/hid
-    ${REALTEK_SDK_ROOT}/sdk/inc/hal/power
-    ${REALTEK_SDK_ROOT}/sdk/bin/rtl87x3eu/upperstack_stamp
-    ${REALTEK_SDK_ROOT}/sdk/bin/rtl87x3eu/flash_map_config
-    ${REALTEK_SDK_ROOT}/sdk/inc/rtl87x3eu/hal/io
-    ${REALTEK_SDK_ROOT}/sdk/inc/hal/platform
-    ${REALTEK_SDK_ROOT}/sdk/inc/hal/io
-    ${REALTEK_SDK_ROOT}/sdk/inc/framework/sysm
-    ${REALTEK_SDK_ROOT}/sdk/inc/platform
-    ${REALTEK_SDK_ROOT}/sdk/bin/rtl87x3eu
 )
 endif()

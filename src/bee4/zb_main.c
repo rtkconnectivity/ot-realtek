@@ -48,6 +48,7 @@
 #include "app_section.h"
 #include "mac_driver.h"
 #include "mac_driver_mpan.h"
+#include "platform-bee.h"
 
 /** @defgroup  PERIPH_DEMO_MAIN Peripheral Main
     * @brief Main file to initialize hardware and BT stack and start task scheduling
@@ -215,6 +216,7 @@ extern void (*modem_set_zb_cca_combination)(uint8_t comb);
 mac_attribute_t attr;
 mac_driver_t drv;
 pan_mac_comm_t pan_mac_comm;
+pan_mac_t pan_mac[MAX_PAN_NUM];
 
 extern void mac_SetTxNCsma(bool enable);
 void zb_mac_drv_init(void)
@@ -225,6 +227,7 @@ void zb_mac_drv_init(void)
 #if (BUILD_RCP == 1)
     attr.phy_arbitration_en = 0;
 #else
+    attr.mac_cfg.anch_jump_val = 3;
     lowerstack_SystemCall(10, 1, 512, -1);
 #endif
     mac_Enable();
@@ -236,12 +239,16 @@ typedef void (*bt_hci_reset_handler_t)(void);
 extern void mac_RegisterBtHciResetHanlder(bt_hci_reset_handler_t handler);
 void zb_mac_drv_enable(void)
 {
+    int8_t tx_power_default;
     mpan_CommonInit(&pan_mac_comm);
+    mpan_Init(&pan_mac[0], MPAN_PAN0);
     zb_mac_drv_init();
     mac_RegisterBtHciResetHanlder(zb_mac_drv_init);
     mac_RegisterCallback(NULL, edscan_level2dbm, set_zigbee_priority,
                          *modem_set_zb_cca_combination);
-    mac_SetCcaMode(MAC_CCA_CS_ED_AND);
+    mac_SetCcaMode(MAC_CCA_CS_ED);
+    tx_power_default = mac_GetTXPower_patch();
+    mac_SetTXPower_patch(tx_power_default);
 }
 
 extern void mac_Initialize_Patch(void);
