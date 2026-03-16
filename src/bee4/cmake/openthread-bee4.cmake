@@ -150,7 +150,7 @@ target_include_directories(openthread-bee4
         ${OT_REALTEK_ROOT}/src
         ${REALTEK_SDK_INCPATH}
         ${REALTEK_SDK_ROOT}/subsys/mac_driver
-        ${REALTEK_SDK_ROOT}/subsys/mac_driver/portable/bee4
+        ${REALTEK_SDK_ROOT}/subsys/mac_driver/portable/rtl87x2g
         ${CMAKE_CURRENT_SOURCE_DIR}/${BUILD_TARGET}
         ${CMAKE_CURRENT_SOURCE_DIR}/common
         ${REALTEK_SDK_ROOT}/subsys/usb/usb_hal/inc
