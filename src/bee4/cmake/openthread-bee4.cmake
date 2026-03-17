@@ -75,8 +75,8 @@ target_link_libraries(openthread-bee4
     PRIVATE
         ${OT_MBEDTLS}
         ot-config
-        rtl87x2g-internal
         bee4-peripheral
+        "${REALTEK_SDK_ROOT}/lib/rtl87x2g/librtl87x2g-internal.a"
         "${REALTEK_SDK_ROOT}/subsys/usb/usb_lib/lib/rtl87x2g/gcc/libusb.a"
         "${REALTEK_SDK_ROOT}/subsys/usb/usb_hal/lib/rtl87x2g/gcc/libusb_hal.a"
         "${REALTEK_SDK_ROOT}/subsys/bluetooth/gap_ext/lib/rtl87x2g/bt_host_0_0/gcc/libgap_utils.a"
