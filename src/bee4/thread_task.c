@@ -48,6 +48,9 @@
 #include "zb_tst_cfg.h"
 #include "dbg_printf.h"
 #include "mem_config.h"
+#ifdef BUILD_MATTER
+#include "matter_ble.h"
+#endif
 
 /** @addtogroup  MAC_TASK_DEMO
     * @{
@@ -161,6 +164,7 @@ void matter_test_task(void *p_param)
     DBG_DIRECT("%s", __func__);
     mbedtls_threading_set_alt(bee_mutex_init, bee_mutex_free, bee_mutex_lock, bee_mutex_unlock);
     uart_init_internal();
+    matter_ble_init(1);
     InitGPIO();
     ChipTest();
     DBG_DIRECT("matter task done!");
