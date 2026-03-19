@@ -118,13 +118,13 @@ else()
         endif()
     else()
 
-        add_library(bee4-mbedtls INTERFACE)
+        add_library(rtl87x2g-mbedtls INTERFACE)
 
-    target_link_libraries(bee4-mbedtls
+    target_link_libraries(rtl87x2g-mbedtls
         INTERFACE
-            ${OT_REALTEK_ROOT}/lib/bee4/libmbedtls.a
-            ${OT_REALTEK_ROOT}/lib/bee4/libmbedx509.a
-            ${OT_REALTEK_ROOT}/lib/bee4/libmbedcrypto.a
+            ${OT_REALTEK_ROOT}/lib/rtl87x2g/libmbedtls.a
+            ${OT_REALTEK_ROOT}/lib/rtl87x2g/libmbedx509.a
+            ${OT_REALTEK_ROOT}/lib/rtl87x2g/libmbedcrypto.a
     )
 
         target_include_directories(ot-config

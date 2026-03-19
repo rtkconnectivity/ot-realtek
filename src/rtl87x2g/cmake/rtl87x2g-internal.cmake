@@ -26,31 +26,30 @@
 #  POSSIBILITY OF SUCH DAMAGE.
 #
 
-add_library(bee4-peripheral
-    # peripheral
-    "${REALTEK_SDK_ROOT}/bsp/driver/pinmux/src/rtl87x2g/rtl_pinmux.c"
-    "${REALTEK_SDK_ROOT}/bsp/driver/rcc/src/rtl87x2g/rtl_rcc.c"
-    "${REALTEK_SDK_ROOT}/bsp/driver/nvic/src/rtl87x2g/rtl_nvic.c"
-    "${REALTEK_SDK_ROOT}/bsp/driver/tim/src/rtl_common/rtl_tim.c"
-    "${REALTEK_SDK_ROOT}/bsp/driver/uart/src/rtl_common/rtl_uart.c"
-    "${REALTEK_SDK_ROOT}/bsp/driver/dma/src/rtl_common/rtl_gdma.c"
-    "${REALTEK_SDK_ROOT}/bsp/driver/gpio/src/rtl_common/rtl_gpio.c"
-)
+if(${BUILD_TYPE} STREQUAL "dev")
+    add_library(rtl87x2g-internal
+        # mac driver
+        ${REALTEK_SDK_ROOT}/subsys/mac_driver/private/mac_driver_ext.c
+        ${REALTEK_SDK_ROOT}/subsys/mac_driver/private/rtl87x2g/patch.c
+        ${REALTEK_SDK_ROOT}/subsys/mac_driver/private/rtl87x2g/pta.c
+        ${REALTEK_SDK_ROOT}/subsys/mac_driver/private/rtl87x2g/zb_pta_pin_mux.c
+        ${REALTEK_SDK_ROOT}/subsys/mac_driver/private/zb_pta.c
+        ${REALTEK_SDK_ROOT}/subsys/mac_driver/private/zb_sw_pta.c
+        ${OT_REALTEK_ROOT}/src/rtl87x2g/internal/config_param/config_param_handle.c
+    )
 
-set_target_properties(
-    bee4-peripheral
-    PROPERTIES
-        C_STANDARD 99
-)
-
-target_link_directories(bee4-peripheral
-    PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/${BUILD_TARGET}
-        ${PROJECT_SOURCE_DIR}/lib/${RT_PLATFORM}
-)
-
-target_include_directories(bee4-peripheral
-    PRIVATE
-        ${REALTEK_SDK_INCPATH}
-)
-
+    target_include_directories(rtl87x2g-internal
+        PRIVATE
+            ${REALTEK_SDK_INCPATH}
+            ${REALTEK_SDK_ROOT}/bsp/sdk_lib/inc
+            ${REALTEK_SDK_ROOT}/subsys/mac_driver
+            ${REALTEK_SDK_ROOT}/subsys/mac_driver/portable/rtl87x2g
+            ${REALTEK_SDK_ROOT}/subsys/mac_driver/private
+            ${REALTEK_SDK_ROOT}/subsys/mac_driver/private/rtl87x2g
+            ${CMAKE_CURRENT_SOURCE_DIR}/${BUILD_TARGET}
+            ${CMAKE_CURRENT_SOURCE_DIR}/common
+            ${CMAKE_CURRENT_SOURCE_DIR}
+            ${REALTEK_SDK_ROOT}/../ROMExport/rtl87x2g/inc
+            ${REALTEK_SDK_ROOT}/../ROMExport/rtl87x2g/inc/nsc
+    )
+endif()

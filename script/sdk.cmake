@@ -30,7 +30,7 @@ if(${RT_PLATFORM} STREQUAL "rtl8852d")
     include(${PROJECT_SOURCE_DIR}/cmake/fetch_openthread.cmake)
 endif()
 
-if(${RT_PLATFORM} STREQUAL "bee4")
+if(${RT_PLATFORM} STREQUAL "rtl87x2g")
     set(REALTEK_SDK_ROOT
         ${OT_REALTEK_ROOT}/third_party/Realtek/rtl87x2g_sdk
     )

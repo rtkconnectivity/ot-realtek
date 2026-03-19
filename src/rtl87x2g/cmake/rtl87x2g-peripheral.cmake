@@ -26,30 +26,31 @@
 #  POSSIBILITY OF SUCH DAMAGE.
 #
 
-if(${BUILD_TYPE} STREQUAL "dev")
-    add_library(bee4-internal
-        # mac driver
-        ${REALTEK_SDK_ROOT}/subsys/mac_driver/private/mac_driver_ext.c
-        ${REALTEK_SDK_ROOT}/subsys/mac_driver/private/bee4/patch.c
-        ${REALTEK_SDK_ROOT}/subsys/mac_driver/private/bee4/pta.c
-        ${REALTEK_SDK_ROOT}/subsys/mac_driver/private/bee4/zb_pta_pin_mux.c
-        ${REALTEK_SDK_ROOT}/subsys/mac_driver/private/zb_pta.c
-        ${REALTEK_SDK_ROOT}/subsys/mac_driver/private/zb_sw_pta.c
-        ${OT_REALTEK_ROOT}/src/bee4/internal/config_param/config_param_handle.c
-    )
+add_library(rtl87x2g-peripheral
+    # peripheral
+    "${REALTEK_SDK_ROOT}/bsp/driver/pinmux/src/rtl87x2g/rtl_pinmux.c"
+    "${REALTEK_SDK_ROOT}/bsp/driver/rcc/src/rtl87x2g/rtl_rcc.c"
+    "${REALTEK_SDK_ROOT}/bsp/driver/nvic/src/rtl87x2g/rtl_nvic.c"
+    "${REALTEK_SDK_ROOT}/bsp/driver/tim/src/rtl_common/rtl_tim.c"
+    "${REALTEK_SDK_ROOT}/bsp/driver/uart/src/rtl_common/rtl_uart.c"
+    "${REALTEK_SDK_ROOT}/bsp/driver/dma/src/rtl_common/rtl_gdma.c"
+    "${REALTEK_SDK_ROOT}/bsp/driver/gpio/src/rtl_common/rtl_gpio.c"
+)
 
-    target_include_directories(bee4-internal
-        PRIVATE
-            ${REALTEK_SDK_INCPATH}
-            ${REALTEK_SDK_ROOT}/bsp/sdk_lib/inc
-            ${REALTEK_SDK_ROOT}/subsys/mac_driver
-            ${REALTEK_SDK_ROOT}/subsys/mac_driver/portable/bee4
-            ${REALTEK_SDK_ROOT}/subsys/mac_driver/private
-            ${REALTEK_SDK_ROOT}/subsys/mac_driver/private/bee4
-            ${CMAKE_CURRENT_SOURCE_DIR}/${BUILD_TARGET}
-            ${CMAKE_CURRENT_SOURCE_DIR}/common
-            ${CMAKE_CURRENT_SOURCE_DIR}
-            ${REALTEK_SDK_ROOT}/../ROMExport/rtl87x2g/inc
-            ${REALTEK_SDK_ROOT}/../ROMExport/rtl87x2g/inc/nsc
-    )
-endif()
+set_target_properties(
+    rtl87x2g-peripheral
+    PROPERTIES
+        C_STANDARD 99
+)
+
+target_link_directories(rtl87x2g-peripheral
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/${BUILD_TARGET}
+        ${PROJECT_SOURCE_DIR}/lib/${RT_PLATFORM}
+)
+
+target_include_directories(rtl87x2g-peripheral
+    PRIVATE
+        ${REALTEK_SDK_INCPATH}
+)
+
