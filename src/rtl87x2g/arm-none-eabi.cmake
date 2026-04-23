@@ -34,7 +34,7 @@ set(CMAKE_CXX_COMPILER             arm-none-eabi-g++)
 set(CMAKE_ASM_COMPILER             arm-none-eabi-as)
 set(CMAKE_RANLIB                   arm-none-eabi-ranlib)
 
-set(COMMON_C_FLAGS                 "-mcpu=cortex-m33 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -mthumb -mabi=aapcs -fdata-sections -ffunction-sections -fdiagnostics-color -fshort-wchar -DCONFIG_SOC_SERIES_RTL87X2G -DCONFIG_RTK_MAIN_FUN")
+set(COMMON_C_FLAGS                 "-march=armv8.1-m.main+dsp+mve+fp -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard -mabi=aapcs -fdata-sections -ffunction-sections -fdiagnostics-color -fshort-wchar -DCONFIG_SOC_SERIES_RTL87X2G -DCONFIG_RTK_MAIN_FUN")
 
 set(CMAKE_C_FLAGS_INIT             "${COMMON_C_FLAGS} -std=gnu99 -Wno-incompatible-pointer-types -Wno-unused-parameter -Wno-unused-function -Wno-discarded-qualifiers")
 set(CMAKE_CXX_FLAGS_INIT           "${COMMON_C_FLAGS} -fno-exceptions -fno-rtti")
@@ -48,3 +48,24 @@ set(CMAKE_ASM_FLAGS_DEBUG          "-g")
 set(CMAKE_C_FLAGS_RELEASE          "-Os")
 set(CMAKE_CXX_FLAGS_RELEASE        "-Os")
 set(CMAKE_ASM_FLAGS_RELEASE        "")
+
+# # Global compiler flags for GN build                        
+if(NOT DEFINED GLOBAL_C_FLAGS)                              
+    set(GLOBAL_C_FLAGS                                      
+        -march=armv8.1-m.main+dsp+mve+fp                           
+        -mthumb                                                                                         
+        -mfpu=fpv5-sp-d16                                   
+        -mfloat-abi=hard                                    
+        -Os                                                 
+        -ffunction-sections                                 
+        -fstack-usage                                       
+        -fdata-sections                                                                                                        
+        -fdiagnostics-color=always 
+        -Wno-type-limits                                                    
+    )                                                       
+endif()                                                     
+                                                            
+if(NOT DEFINED GLOBAL_CXX_FLAGS)                            
+    set(GLOBAL_CXX_FLAGS -fno-rtti)                         
+endif() 
+
